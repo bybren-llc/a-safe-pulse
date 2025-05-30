@@ -59,25 +59,43 @@ describe('LinearIssueCreatorFromPlanning', () => {
     // Reset mocks
     jest.clearAllMocks();
 
+    // Setup mock implementations - SAME PATTERN as change-detector.test.ts
+    (PlanningIssueMapper as jest.Mock).mockImplementation(() => ({
+      mapToLinear: jest.fn()
+    }));
+
+    (ConfluenceClient as jest.Mock).mockImplementation(() => ({
+      parsePage: jest.fn(),
+      parsePageByUrl: jest.fn()
+    }));
+
+    (PlanningExtractor as jest.Mock).mockImplementation(() => ({
+      getPlanningDocument: jest.fn()
+    }));
+
     // Create instance with mocked dependencies
     issueCreator = new LinearIssueCreatorFromPlanning(options);
 
-    // Get mock instances
-    mockPlanningIssueMapper = (PlanningIssueMapper as unknown) as jest.Mocked<PlanningIssueMapper>;
-    mockConfluenceClient = (ConfluenceClient as unknown) as jest.Mocked<ConfluenceClient>;
-    mockPlanningExtractor = (PlanningExtractor as unknown) as jest.Mocked<PlanningExtractor>;
+    // Get mock instances - these are the INSTANCES created by the constructor
+    mockPlanningIssueMapper = (issueCreator as any).planningIssueMapper;
+    mockConfluenceClient = (issueCreator as any).confluenceClient;
+
+    // For PlanningExtractor, we need to mock it when it's instantiated in extractPlanningInformation
+    mockPlanningExtractor = {
+      getPlanningDocument: jest.fn().mockReturnValue(mockPlanningDocument)
+    } as unknown as jest.Mocked<PlanningExtractor>;
+
+    // Mock PlanningExtractor constructor to return our mock instance
+    (PlanningExtractor as jest.Mock).mockImplementation(() => mockPlanningExtractor);
   });
 
   describe('createIssuesFromConfluence', () => {
     it('should create issues from Confluence planning data', async () => {
       // Arrange
       const mockDocument = { title: 'Test', elements: [], sections: [], metadata: {} };
-      // @ts-ignore - Jest mock type inference issue
-      (mockConfluenceClient.parsePage as jest.Mock).mockResolvedValue(mockDocument);
-      // @ts-ignore - Jest mock type inference issue
-      (mockPlanningExtractor.getPlanningDocument as jest.Mock).mockReturnValue(mockPlanningDocument);
-      // @ts-ignore - Jest mock type inference issue
-      (mockPlanningIssueMapper.mapToLinear as jest.Mock).mockResolvedValue(mockMappingResult);
+      mockConfluenceClient.parsePage.mockResolvedValue(mockDocument);
+      mockPlanningExtractor.getPlanningDocument.mockReturnValue(mockPlanningDocument);
+      mockPlanningIssueMapper.mapToLinear.mockResolvedValue(mockMappingResult);
 
       // Act
       const result = await issueCreator.createIssuesFromConfluence();
@@ -98,20 +116,22 @@ describe('LinearIssueCreatorFromPlanning', () => {
         confluencePageIdOrUrl: 'https://example.atlassian.net/wiki/spaces/SPACE/pages/123456789'
       };
       const urlIssueCreator = new LinearIssueCreatorFromPlanning(urlOptions);
+
+      // Get the mock instances from the new URL issue creator
+      const urlMockConfluenceClient = (urlIssueCreator as any).confluenceClient;
+      const urlMockPlanningIssueMapper = (urlIssueCreator as any).planningIssueMapper;
+
       const mockDocument = { title: 'Test', elements: [], sections: [], metadata: {} };
-      // @ts-ignore - Jest mock type inference issue
-      (mockConfluenceClient.parsePageByUrl as jest.Mock).mockResolvedValue(mockDocument);
-      // @ts-ignore - Jest mock type inference issue
-      (mockPlanningExtractor.getPlanningDocument as jest.Mock).mockReturnValue(mockPlanningDocument);
-      // @ts-ignore - Jest mock type inference issue
-      (mockPlanningIssueMapper.mapToLinear as jest.Mock).mockResolvedValue(mockMappingResult);
+      urlMockConfluenceClient.parsePageByUrl.mockResolvedValue(mockDocument);
+      mockPlanningExtractor.getPlanningDocument.mockReturnValue(mockPlanningDocument);
+      urlMockPlanningIssueMapper.mapToLinear.mockResolvedValue(mockMappingResult);
 
       // Act
       const result = await urlIssueCreator.createIssuesFromConfluence();
 
       // Assert
-      expect(mockConfluenceClient.parsePageByUrl).toHaveBeenCalledWith(urlOptions.confluencePageIdOrUrl);
-      expect(mockPlanningIssueMapper.mapToLinear).toHaveBeenCalledWith(mockPlanningDocument);
+      expect(urlMockConfluenceClient.parsePageByUrl).toHaveBeenCalledWith(urlOptions.confluencePageIdOrUrl);
+      expect(urlMockPlanningIssueMapper.mapToLinear).toHaveBeenCalledWith(mockPlanningDocument);
       expect(result).toEqual({
         ...mockMappingResult,
         planningDocument: mockPlanningDocument
@@ -121,8 +141,7 @@ describe('LinearIssueCreatorFromPlanning', () => {
     it('should handle errors', async () => {
       // Arrange
       const error = new Error('Test error');
-      // @ts-ignore - Jest mock type inference issue
-      (mockConfluenceClient.parsePage as jest.Mock).mockRejectedValue(error);
+      mockConfluenceClient.parsePage.mockRejectedValue(error);
 
       // Act & Assert
       await expect(issueCreator.createIssuesFromConfluence()).rejects.toThrow(error);
@@ -132,8 +151,7 @@ describe('LinearIssueCreatorFromPlanning', () => {
   describe('createIssuesFromPlanningDocument', () => {
     it('should create issues from a planning document', async () => {
       // Arrange
-      // @ts-ignore - Jest mock type inference issue
-      (mockPlanningIssueMapper.mapToLinear as jest.Mock).mockResolvedValue(mockMappingResult);
+      mockPlanningIssueMapper.mapToLinear.mockResolvedValue(mockMappingResult);
 
       // Act
       const result = await issueCreator.createIssuesFromPlanningDocument(mockPlanningDocument as any);
@@ -149,8 +167,7 @@ describe('LinearIssueCreatorFromPlanning', () => {
     it('should handle errors', async () => {
       // Arrange
       const error = new Error('Test error');
-      // @ts-ignore - Jest mock type inference issue
-      (mockPlanningIssueMapper.mapToLinear as jest.Mock).mockRejectedValue(error);
+      mockPlanningIssueMapper.mapToLinear.mockRejectedValue(error);
 
       // Act & Assert
       await expect(issueCreator.createIssuesFromPlanningDocument(mockPlanningDocument as any)).rejects.toThrow(error);
