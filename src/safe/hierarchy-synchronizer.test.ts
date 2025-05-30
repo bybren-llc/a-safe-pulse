@@ -68,20 +68,20 @@ describe('HierarchySynchronizer', () => {
         id: 'test-planning-document',
         title: 'Test Planning Document',
         epics: [
-          { id: 'epic1', title: 'Epic 1', description: 'Epic 1 description' },
-          { id: 'epic2', title: 'Epic 2', description: 'Epic 2 description' }
+          { id: 'epic1', type: 'epic', title: 'Epic 1', description: 'Epic 1 description', features: [], attributes: {} },
+          { id: 'epic2', type: 'epic', title: 'Epic 2', description: 'Epic 2 description', features: [], attributes: {} }
         ],
         features: [
-          { id: 'feature1', title: 'Feature 1', description: 'Feature 1 description', epicId: 'epic1' },
-          { id: 'feature2', title: 'Feature 2', description: 'Feature 2 description', epicId: 'epic2' }
+          { id: 'feature1', type: 'feature', title: 'Feature 1', description: 'Feature 1 description', epicId: 'epic1', stories: [], enablers: [], attributes: {} },
+          { id: 'feature2', type: 'feature', title: 'Feature 2', description: 'Feature 2 description', epicId: 'epic2', stories: [], enablers: [], attributes: {} }
         ],
         stories: [
-          { id: 'story1', title: 'Story 1', description: 'Story 1 description', featureId: 'feature1' },
-          { id: 'story2', title: 'Story 2', description: 'Story 2 description', featureId: 'feature2' }
+          { id: 'story1', type: 'story', title: 'Story 1', description: 'Story 1 description', featureId: 'feature1', acceptanceCriteria: [], attributes: {} },
+          { id: 'story2', type: 'story', title: 'Story 2', description: 'Story 2 description', featureId: 'feature2', acceptanceCriteria: [], attributes: {} }
         ],
         enablers: [
-          { id: 'enabler1', title: 'Enabler 1', description: 'Enabler 1 description', featureId: 'feature1', enablerType: 'Architecture' },
-          { id: 'enabler2', title: 'Enabler 2', description: 'Enabler 2 description', featureId: 'feature2', enablerType: 'Infrastructure' }
+          { id: 'enabler1', type: 'enabler', title: 'Enabler 1', description: 'Enabler 1 description', featureId: 'feature1', enablerType: 'architecture', attributes: {} },
+          { id: 'enabler2', type: 'enabler', title: 'Enabler 2', description: 'Enabler 2 description', featureId: 'feature2', enablerType: 'infrastructure', attributes: {} }
         ]
       };
 
@@ -102,10 +102,10 @@ describe('HierarchySynchronizer', () => {
 
       // Mock the findAddedItems method
       const findAddedItemsSpy = jest.spyOn(synchronizer as any, 'findAddedItems').mockResolvedValue({
-        epics: [planningDocument.epics[1]],
-        features: [planningDocument.features[1]],
-        stories: [planningDocument.stories[1]],
-        enablers: [planningDocument.enablers[1]]
+        epics: [planningDocument.epics?.[1]],
+        features: [planningDocument.features?.[1]],
+        stories: [planningDocument.stories?.[1]],
+        enablers: [planningDocument.enablers?.[1]]
       });
 
       // Mock the findRemovedItems method
@@ -118,10 +118,10 @@ describe('HierarchySynchronizer', () => {
 
       // Mock the findModifiedItems method
       const findModifiedItemsSpy = jest.spyOn(synchronizer as any, 'findModifiedItems').mockResolvedValue({
-        epics: [{ id: 'linear-epic1', epic: planningDocument.epics[0] }],
-        features: [{ id: 'linear-feature1', feature: planningDocument.features[0] }],
-        stories: [{ id: 'linear-story1', story: planningDocument.stories[0] }],
-        enablers: [{ id: 'linear-enabler1', enabler: planningDocument.enablers[0] }]
+        epics: [{ id: 'linear-epic1', epic: planningDocument.epics?.[0] }],
+        features: [{ id: 'linear-feature1', feature: planningDocument.features?.[0] }],
+        stories: [{ id: 'linear-story1', story: planningDocument.stories?.[0] }],
+        enablers: [{ id: 'linear-enabler1', enabler: planningDocument.enablers?.[0] }]
       });
 
       // Mock the createNewItems method
@@ -133,7 +133,7 @@ describe('HierarchySynchronizer', () => {
       });
 
       // Mock the updateModifiedItems method
-      const updateModifiedItemsSpy = jest.spyOn(synchronizer as any, 'updateModifiedItems').mockResolvedValue();
+      const updateModifiedItemsSpy = jest.spyOn(synchronizer as any, 'updateModifiedItems').mockResolvedValue(undefined);
 
       // Call the method
       const result = await synchronizer.synchronizeHierarchy(planningDocument, existingIssues);
@@ -144,16 +144,16 @@ describe('HierarchySynchronizer', () => {
       expect(findRemovedItemsSpy).toHaveBeenCalledWith(planningDocument, existingIssues);
       expect(findModifiedItemsSpy).toHaveBeenCalledWith(planningDocument, existingIssues);
       expect(createNewItemsSpy).toHaveBeenCalledWith({
-        epics: [planningDocument.epics[1]],
-        features: [planningDocument.features[1]],
-        stories: [planningDocument.stories[1]],
-        enablers: [planningDocument.enablers[1]]
+        epics: [planningDocument.epics?.[1]],
+        features: [planningDocument.features?.[1]],
+        stories: [planningDocument.stories?.[1]],
+        enablers: [planningDocument.enablers?.[1]]
       });
       expect(updateModifiedItemsSpy).toHaveBeenCalledWith({
-        epics: [{ id: 'linear-epic1', epic: planningDocument.epics[0] }],
-        features: [{ id: 'linear-feature1', feature: planningDocument.features[0] }],
-        stories: [{ id: 'linear-story1', story: planningDocument.stories[0] }],
-        enablers: [{ id: 'linear-enabler1', enabler: planningDocument.enablers[0] }]
+        epics: [{ id: 'linear-epic1', epic: planningDocument.epics?.[0] }],
+        features: [{ id: 'linear-feature1', feature: planningDocument.features?.[0] }],
+        stories: [{ id: 'linear-story1', story: planningDocument.stories?.[0] }],
+        enablers: [{ id: 'linear-enabler1', enabler: planningDocument.enablers?.[0] }]
       });
       expect(mockHierarchyManager.updateHierarchy).toHaveBeenCalledWith(planningDocument, {
         epics: { epic1: 'linear-epic1', epic2: 'linear-epic2' },
@@ -179,20 +179,20 @@ describe('HierarchySynchronizer', () => {
         id: 'test-planning-document',
         title: 'Test Planning Document',
         epics: [
-          { id: 'epic1', title: 'Epic 1', description: 'Epic 1 description' },
-          { id: 'epic2', title: 'Epic 2', description: 'Epic 2 description' }
+          { id: 'epic1', type: 'epic', title: 'Epic 1', description: 'Epic 1 description', features: [], attributes: {} },
+          { id: 'epic2', type: 'epic', title: 'Epic 2', description: 'Epic 2 description', features: [], attributes: {} }
         ],
         features: [
-          { id: 'feature1', title: 'Feature 1', description: 'Feature 1 description', epicId: 'epic1' },
-          { id: 'feature2', title: 'Feature 2', description: 'Feature 2 description', epicId: 'epic2' }
+          { id: 'feature1', type: 'feature', title: 'Feature 1', description: 'Feature 1 description', epicId: 'epic1', stories: [], enablers: [], attributes: {} },
+          { id: 'feature2', type: 'feature', title: 'Feature 2', description: 'Feature 2 description', epicId: 'epic2', stories: [], enablers: [], attributes: {} }
         ],
         stories: [
-          { id: 'story1', title: 'Story 1', description: 'Story 1 description', featureId: 'feature1' },
-          { id: 'story2', title: 'Story 2', description: 'Story 2 description', featureId: 'feature2' }
+          { id: 'story1', type: 'story', title: 'Story 1', description: 'Story 1 description', featureId: 'feature1', acceptanceCriteria: [], attributes: {} },
+          { id: 'story2', type: 'story', title: 'Story 2', description: 'Story 2 description', featureId: 'feature2', acceptanceCriteria: [], attributes: {} }
         ],
         enablers: [
-          { id: 'enabler1', title: 'Enabler 1', description: 'Enabler 1 description', featureId: 'feature1', enablerType: 'Architecture' },
-          { id: 'enabler2', title: 'Enabler 2', description: 'Enabler 2 description', featureId: 'feature2', enablerType: 'Infrastructure' }
+          { id: 'enabler1', type: 'enabler', title: 'Enabler 1', description: 'Enabler 1 description', featureId: 'feature1', enablerType: 'architecture', attributes: {} },
+          { id: 'enabler2', type: 'enabler', title: 'Enabler 2', description: 'Enabler 2 description', featureId: 'feature2', enablerType: 'infrastructure', attributes: {} }
         ]
       };
 
@@ -209,10 +209,10 @@ describe('HierarchySynchronizer', () => {
 
       // Verify the result
       expect(result).toEqual({
-        epics: [planningDocument.epics[1]],
-        features: [planningDocument.features[1]],
-        stories: [planningDocument.stories[1]],
-        enablers: [planningDocument.enablers[1]]
+        epics: [planningDocument.epics?.[1]],
+        features: [planningDocument.features?.[1]],
+        stories: [planningDocument.stories?.[1]],
+        enablers: [planningDocument.enablers?.[1]]
       });
     });
   });
@@ -224,16 +224,16 @@ describe('HierarchySynchronizer', () => {
         id: 'test-planning-document',
         title: 'Test Planning Document',
         epics: [
-          { id: 'epic1', title: 'Epic 1', description: 'Epic 1 description' }
+          { id: 'epic1', type: 'epic', title: 'Epic 1', description: 'Epic 1 description', features: [], attributes: {} }
         ],
         features: [
-          { id: 'feature1', title: 'Feature 1', description: 'Feature 1 description', epicId: 'epic1' }
+          { id: 'feature1', type: 'feature', title: 'Feature 1', description: 'Feature 1 description', epicId: 'epic1', stories: [], enablers: [], attributes: {} }
         ],
         stories: [
-          { id: 'story1', title: 'Story 1', description: 'Story 1 description', featureId: 'feature1' }
+          { id: 'story1', type: 'story', title: 'Story 1', description: 'Story 1 description', featureId: 'feature1', acceptanceCriteria: [], attributes: {} }
         ],
         enablers: [
-          { id: 'enabler1', title: 'Enabler 1', description: 'Enabler 1 description', featureId: 'feature1', enablerType: 'Architecture' }
+          { id: 'enabler1', type: 'enabler', title: 'Enabler 1', description: 'Enabler 1 description', featureId: 'feature1', enablerType: 'architecture', attributes: {} }
         ]
       };
 
@@ -265,20 +265,20 @@ describe('HierarchySynchronizer', () => {
         id: 'test-planning-document',
         title: 'Test Planning Document',
         epics: [
-          { id: 'epic1', title: 'Epic 1', description: 'Epic 1 description' },
-          { id: 'epic2', title: 'Epic 2', description: 'Epic 2 description' }
+          { id: 'epic1', type: 'epic', title: 'Epic 1', description: 'Epic 1 description', features: [], attributes: {} },
+          { id: 'epic2', type: 'epic', title: 'Epic 2', description: 'Epic 2 description', features: [], attributes: {} }
         ],
         features: [
-          { id: 'feature1', title: 'Feature 1', description: 'Feature 1 description', epicId: 'epic1' },
-          { id: 'feature2', title: 'Feature 2', description: 'Feature 2 description', epicId: 'epic2' }
+          { id: 'feature1', type: 'feature', title: 'Feature 1', description: 'Feature 1 description', epicId: 'epic1', stories: [], enablers: [], attributes: {} },
+          { id: 'feature2', type: 'feature', title: 'Feature 2', description: 'Feature 2 description', epicId: 'epic2', stories: [], enablers: [], attributes: {} }
         ],
         stories: [
-          { id: 'story1', title: 'Story 1', description: 'Story 1 description', featureId: 'feature1' },
-          { id: 'story2', title: 'Story 2', description: 'Story 2 description', featureId: 'feature2' }
+          { id: 'story1', type: 'story', title: 'Story 1', description: 'Story 1 description', featureId: 'feature1', acceptanceCriteria: [], attributes: {} },
+          { id: 'story2', type: 'story', title: 'Story 2', description: 'Story 2 description', featureId: 'feature2', acceptanceCriteria: [], attributes: {} }
         ],
         enablers: [
-          { id: 'enabler1', title: 'Enabler 1', description: 'Enabler 1 description', featureId: 'feature1', enablerType: 'Architecture' },
-          { id: 'enabler2', title: 'Enabler 2', description: 'Enabler 2 description', featureId: 'feature2', enablerType: 'Infrastructure' }
+          { id: 'enabler1', type: 'enabler', title: 'Enabler 1', description: 'Enabler 1 description', featureId: 'feature1', enablerType: 'architecture', attributes: {} },
+          { id: 'enabler2', type: 'enabler', title: 'Enabler 2', description: 'Enabler 2 description', featureId: 'feature2', enablerType: 'infrastructure', attributes: {} }
         ]
       };
 
@@ -300,16 +300,16 @@ describe('HierarchySynchronizer', () => {
           { id: 'linear-epic2', epic: planningDocument.epics[1] }
         ],
         features: [
-          { id: 'linear-feature1', feature: planningDocument.features[0] },
-          { id: 'linear-feature2', feature: planningDocument.features[1] }
+          { id: 'linear-feature1', feature: planningDocument.features?.[0] },
+          { id: 'linear-feature2', feature: planningDocument.features?.[1] }
         ],
         stories: [
-          { id: 'linear-story1', story: planningDocument.stories[0] },
-          { id: 'linear-story2', story: planningDocument.stories[1] }
+          { id: 'linear-story1', story: planningDocument.stories?.[0] },
+          { id: 'linear-story2', story: planningDocument.stories?.[1] }
         ],
         enablers: [
-          { id: 'linear-enabler1', enabler: planningDocument.enablers[0] },
-          { id: 'linear-enabler2', enabler: planningDocument.enablers[1] }
+          { id: 'linear-enabler1', enabler: planningDocument.enablers?.[0] },
+          { id: 'linear-enabler2', enabler: planningDocument.enablers?.[1] }
         ]
       });
     });

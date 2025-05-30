@@ -56,9 +56,13 @@ describe('ConflictResolver', () => {
     (ConfluenceClient as jest.Mock).mockImplementation(() => ({}));
     (LinearClientWrapper as jest.Mock).mockImplementation(() => ({}));
     (SyncStore as jest.Mock).mockImplementation(() => ({
+      // @ts-ignore - Jest mock type inference issue
       storeConflict: jest.fn().mockResolvedValue(undefined),
+      // @ts-ignore - Jest mock type inference issue
       storeResolvedConflict: jest.fn().mockResolvedValue(undefined),
+      // @ts-ignore - Jest mock type inference issue
       getUnresolvedConflicts: jest.fn().mockResolvedValue([]),
+      // @ts-ignore - Jest mock type inference issue
       getResolvedConflicts: jest.fn().mockResolvedValue([])
     }));
 

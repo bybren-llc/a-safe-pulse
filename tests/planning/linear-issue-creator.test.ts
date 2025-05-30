@@ -59,23 +59,9 @@ describe('LinearIssueCreatorFromPlanning', () => {
     // Reset mocks
     jest.clearAllMocks();
 
-    // Setup mock implementations
-    (PlanningIssueMapper as jest.Mock).mockImplementation(() => ({
-      mapToLinear: mockResolvedValue(mockMappingResult)
-    }));
-
-    (ConfluenceClient as jest.Mock).mockImplementation(() => ({
-      parsePage: mockResolvedValue({}),
-      parsePageByUrl: mockResolvedValue({})
-    }));
-
-    (PlanningExtractor as jest.Mock).mockImplementation(() => ({
-      getPlanningDocument: mockReturnValue(mockPlanningDocument)
-    }));
-
     // Create instance with mocked dependencies
     issueCreator = new LinearIssueCreatorFromPlanning(options);
-    
+
     // Get mock instances
     mockPlanningIssueMapper = (PlanningIssueMapper as unknown) as jest.Mocked<PlanningIssueMapper>;
     mockConfluenceClient = (ConfluenceClient as unknown) as jest.Mocked<ConfluenceClient>;
@@ -85,9 +71,12 @@ describe('LinearIssueCreatorFromPlanning', () => {
   describe('createIssuesFromConfluence', () => {
     it('should create issues from Confluence planning data', async () => {
       // Arrange
-      const mockDocument = {};
+      const mockDocument = { title: 'Test', elements: [], sections: [], metadata: {} };
+      // @ts-ignore - Jest mock type inference issue
       (mockConfluenceClient.parsePage as jest.Mock).mockResolvedValue(mockDocument);
+      // @ts-ignore - Jest mock type inference issue
       (mockPlanningExtractor.getPlanningDocument as jest.Mock).mockReturnValue(mockPlanningDocument);
+      // @ts-ignore - Jest mock type inference issue
       (mockPlanningIssueMapper.mapToLinear as jest.Mock).mockResolvedValue(mockMappingResult);
 
       // Act
@@ -109,9 +98,12 @@ describe('LinearIssueCreatorFromPlanning', () => {
         confluencePageIdOrUrl: 'https://example.atlassian.net/wiki/spaces/SPACE/pages/123456789'
       };
       const urlIssueCreator = new LinearIssueCreatorFromPlanning(urlOptions);
-      const mockDocument = {};
+      const mockDocument = { title: 'Test', elements: [], sections: [], metadata: {} };
+      // @ts-ignore - Jest mock type inference issue
       (mockConfluenceClient.parsePageByUrl as jest.Mock).mockResolvedValue(mockDocument);
+      // @ts-ignore - Jest mock type inference issue
       (mockPlanningExtractor.getPlanningDocument as jest.Mock).mockReturnValue(mockPlanningDocument);
+      // @ts-ignore - Jest mock type inference issue
       (mockPlanningIssueMapper.mapToLinear as jest.Mock).mockResolvedValue(mockMappingResult);
 
       // Act
@@ -129,6 +121,7 @@ describe('LinearIssueCreatorFromPlanning', () => {
     it('should handle errors', async () => {
       // Arrange
       const error = new Error('Test error');
+      // @ts-ignore - Jest mock type inference issue
       (mockConfluenceClient.parsePage as jest.Mock).mockRejectedValue(error);
 
       // Act & Assert
@@ -139,6 +132,7 @@ describe('LinearIssueCreatorFromPlanning', () => {
   describe('createIssuesFromPlanningDocument', () => {
     it('should create issues from a planning document', async () => {
       // Arrange
+      // @ts-ignore - Jest mock type inference issue
       (mockPlanningIssueMapper.mapToLinear as jest.Mock).mockResolvedValue(mockMappingResult);
 
       // Act
@@ -155,6 +149,7 @@ describe('LinearIssueCreatorFromPlanning', () => {
     it('should handle errors', async () => {
       // Arrange
       const error = new Error('Test error');
+      // @ts-ignore - Jest mock type inference issue
       (mockPlanningIssueMapper.mapToLinear as jest.Mock).mockRejectedValue(error);
 
       // Act & Assert

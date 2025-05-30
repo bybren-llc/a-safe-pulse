@@ -216,7 +216,7 @@ describe('SyncManager', () => {
       expect(status).toEqual({
         isRunning: false,
         lastSyncTimestamp: timestamp,
-        nextSyncTimestamp: timestamp + options.syncIntervalMs
+        nextSyncTimestamp: timestamp + (options.syncIntervalMs || 5000)
       });
     });
   });

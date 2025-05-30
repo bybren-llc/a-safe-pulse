@@ -99,10 +99,10 @@ describe('SAFeHierarchyManager', () => {
   describe('updateEpicFeatureRelationships', () => {
     it('should update Epic-Feature relationships', async () => {
       // Create Epics and Features
-      const epic1: Epic = { id: 'epic1', title: 'Epic 1', description: 'Epic 1 description', features: ['feature1'] };
-      const epic2: Epic = { id: 'epic2', title: 'Epic 2', description: 'Epic 2 description' };
-      const feature1: Feature = { id: 'feature1', title: 'Feature 1', description: 'Feature 1 description', epicId: 'epic1' };
-      const feature2: Feature = { id: 'feature2', title: 'Feature 2', description: 'Feature 2 description' };
+      const epic1: Epic = { id: 'epic1', type: 'epic', title: 'Epic 1', description: 'Epic 1 description', features: [], attributes: {} };
+      const epic2: Epic = { id: 'epic2', type: 'epic', title: 'Epic 2', description: 'Epic 2 description', features: [], attributes: {} };
+      const feature1: Feature = { id: 'feature1', type: 'feature', title: 'Feature 1', description: 'Feature 1 description', epicId: 'epic1', stories: [], enablers: [], attributes: {} };
+      const feature2: Feature = { id: 'feature2', type: 'feature', title: 'Feature 2', description: 'Feature 2 description', stories: [], enablers: [], attributes: {} };
 
       const epics = [epic1, epic2];
       const features = [feature1, feature2];
@@ -129,10 +129,10 @@ describe('SAFeHierarchyManager', () => {
   describe('updateFeatureStoryRelationships', () => {
     it('should update Feature-Story relationships', async () => {
       // Create Features and Stories
-      const feature1: Feature = { id: 'feature1', title: 'Feature 1', description: 'Feature 1 description', stories: ['story1'] };
-      const feature2: Feature = { id: 'feature2', title: 'Feature 2', description: 'Feature 2 description' };
-      const story1: Story = { id: 'story1', title: 'Story 1', description: 'Story 1 description', featureId: 'feature1' };
-      const story2: Story = { id: 'story2', title: 'Story 2', description: 'Story 2 description' };
+      const feature1: Feature = { id: 'feature1', type: 'feature', title: 'Feature 1', description: 'Feature 1 description', stories: [], enablers: [], attributes: {} };
+      const feature2: Feature = { id: 'feature2', type: 'feature', title: 'Feature 2', description: 'Feature 2 description', stories: [], enablers: [], attributes: {} };
+      const story1: Story = { id: 'story1', type: 'story', title: 'Story 1', description: 'Story 1 description', featureId: 'feature1', acceptanceCriteria: [], attributes: {} };
+      const story2: Story = { id: 'story2', type: 'story', title: 'Story 2', description: 'Story 2 description', acceptanceCriteria: [], attributes: {} };
 
       const features = [feature1, feature2];
       const stories = [story1, story2];
@@ -159,10 +159,10 @@ describe('SAFeHierarchyManager', () => {
   describe('updateFeatureEnablerRelationships', () => {
     it('should update Feature-Enabler relationships', async () => {
       // Create Features and Enablers
-      const feature1: Feature = { id: 'feature1', title: 'Feature 1', description: 'Feature 1 description', enablers: ['enabler1'] };
-      const feature2: Feature = { id: 'feature2', title: 'Feature 2', description: 'Feature 2 description' };
-      const enabler1: Enabler = { id: 'enabler1', title: 'Enabler 1', description: 'Enabler 1 description', featureId: 'feature1', enablerType: 'Architecture' };
-      const enabler2: Enabler = { id: 'enabler2', title: 'Enabler 2', description: 'Enabler 2 description', enablerType: 'Infrastructure' };
+      const feature1: Feature = { id: 'feature1', type: 'feature', title: 'Feature 1', description: 'Feature 1 description', enablers: [], stories: [], attributes: {} };
+      const feature2: Feature = { id: 'feature2', type: 'feature', title: 'Feature 2', description: 'Feature 2 description', enablers: [], stories: [], attributes: {} };
+      const enabler1: Enabler = { id: 'enabler1', type: 'enabler', title: 'Enabler 1', description: 'Enabler 1 description', featureId: 'feature1', enablerType: 'architecture', attributes: {} };
+      const enabler2: Enabler = { id: 'enabler2', type: 'enabler', title: 'Enabler 2', description: 'Enabler 2 description', enablerType: 'infrastructure', attributes: {} };
 
       const features = [feature1, feature2];
       const enablers = [enabler1, enabler2];

@@ -215,14 +215,16 @@ export interface SyncStore {
 /**
  * Creates a properly typed mock function with resolved value
  */
-export function createMockResolvedValue<T>(value: T): AsyncMockFunction<any[], T> {
-  return jest.fn().mockResolvedValue(value) as AsyncMockFunction<any[], T>;
+export function createMockResolvedValue<T = any>(value: T): AsyncMockFunction<any[], T> {
+  // @ts-ignore - Jest mock type inference issue
+  return jest.fn().mockResolvedValue(value as any) as AsyncMockFunction<any[], T>;
 }
 
 /**
  * Creates a properly typed mock function with rejected value
  */
 export function createMockRejectedValue(error: Error): AsyncMockFunction<any[], never> {
+  // @ts-ignore - Jest mock type inference issue
   return jest.fn().mockRejectedValue(error) as AsyncMockFunction<any[], never>;
 }
 

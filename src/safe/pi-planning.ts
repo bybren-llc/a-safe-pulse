@@ -4,7 +4,7 @@
  * This module handles PI planning activities in Linear following SAFe methodology.
  */
 import { LinearClient, Cycle, Issue } from '@linear/sdk';
-import type { IssueRelationType } from '@linear/sdk/dist/_generated_documents';
+import { IssueRelationType } from '@linear/sdk/dist/_generated_documents';
 import * as logger from '../utils/logger';
 import { ProgramIncrement, PIFeature, PIIteration, PIObjective, PIRisk } from './pi-model';
 import { SAFeLinearImplementation } from './safe_linear_implementation';
@@ -429,7 +429,7 @@ export class PIManager {
           await this.linearClient.createIssueRelation({
             issueId: issue.id,
             relatedIssueId: featureId,
-            type: 'related' as const // Use string literal - enum not available at runtime
+            type: IssueRelationType.Related
           });
         }
       }

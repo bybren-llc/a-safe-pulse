@@ -22,7 +22,7 @@ describe('ConfluenceParser', () => {
       // Check heading
       expect(document.elements[0].type).toBe(ConfluenceElementType.HEADING);
       expect(document.elements[0].content).toBe('Heading 1');
-      expect(document.elements[0].attributes.level).toBe(1);
+      expect(document.elements[0].attributes?.level).toBe(1);
       
       // Check paragraph
       expect(document.elements[1].type).toBe(ConfluenceElementType.PARAGRAPH);
@@ -30,11 +30,11 @@ describe('ConfluenceParser', () => {
       
       // Check list
       expect(document.elements[2].type).toBe(ConfluenceElementType.LIST);
-      expect(document.elements[2].children.length).toBe(2);
-      expect(document.elements[2].children[0].type).toBe(ConfluenceElementType.LIST_ITEM);
-      expect(document.elements[2].children[0].content).toBe('Item 1');
-      expect(document.elements[2].children[1].type).toBe(ConfluenceElementType.LIST_ITEM);
-      expect(document.elements[2].children[1].content).toBe('Item 2');
+      expect(document.elements[2].children?.length).toBe(2);
+      expect(document.elements[2].children?.[0].type).toBe(ConfluenceElementType.LIST_ITEM);
+      expect(document.elements[2].children?.[0].content).toBe('Item 1');
+      expect(document.elements[2].children?.[1].type).toBe(ConfluenceElementType.LIST_ITEM);
+      expect(document.elements[2].children?.[1].content).toBe('Item 2');
     });
     
     it('should extract sections based on headings', () => {
@@ -92,23 +92,23 @@ describe('ConfluenceParser', () => {
       // Check table
       const table = document.elements[0];
       expect(table.type).toBe(ConfluenceElementType.TABLE);
-      expect(table.children.length).toBe(2);
-      
+      expect(table.children?.length).toBe(2);
+
       // Check header row
-      const headerRow = table.children[0];
-      expect(headerRow.type).toBe(ConfluenceElementType.TABLE_ROW);
-      expect(headerRow.children.length).toBe(2);
-      expect(headerRow.children[0].type).toBe(ConfluenceElementType.TABLE_CELL);
-      expect(headerRow.children[0].content).toBe('Header 1');
-      expect(headerRow.children[0].attributes.isHeader).toBe(true);
-      
+      const headerRow = table.children?.[0];
+      expect(headerRow?.type).toBe(ConfluenceElementType.TABLE_ROW);
+      expect(headerRow?.children?.length).toBe(2);
+      expect(headerRow?.children?.[0].type).toBe(ConfluenceElementType.TABLE_CELL);
+      expect(headerRow?.children?.[0].content).toBe('Header 1');
+      expect(headerRow?.children?.[0].attributes?.isHeader).toBe(true);
+
       // Check data row
-      const dataRow = table.children[1];
-      expect(dataRow.type).toBe(ConfluenceElementType.TABLE_ROW);
-      expect(dataRow.children.length).toBe(2);
-      expect(dataRow.children[0].type).toBe(ConfluenceElementType.TABLE_CELL);
-      expect(dataRow.children[0].content).toBe('Cell 1');
-      expect(dataRow.children[0].attributes.isHeader).toBe(false);
+      const dataRow = table.children?.[1];
+      expect(dataRow?.type).toBe(ConfluenceElementType.TABLE_ROW);
+      expect(dataRow?.children?.length).toBe(2);
+      expect(dataRow?.children?.[0].type).toBe(ConfluenceElementType.TABLE_CELL);
+      expect(dataRow?.children?.[0].content).toBe('Cell 1');
+      expect(dataRow?.children?.[0].attributes?.isHeader).toBe(false);
     });
     
     it('should parse a link', () => {
@@ -126,11 +126,11 @@ describe('ConfluenceParser', () => {
       expect(paragraph.type).toBe(ConfluenceElementType.PARAGRAPH);
       
       // Check link
-      const link = paragraph.children[0];
-      expect(link.type).toBe(ConfluenceElementType.LINK);
-      expect(link.content).toBe('link');
-      expect(link.attributes.href).toBe('https://example.com');
-      expect(link.attributes.title).toBe('Example');
+      const link = paragraph.children?.[0];
+      expect(link?.type).toBe(ConfluenceElementType.LINK);
+      expect(link?.content).toBe('link');
+      expect(link?.attributes?.href).toBe('https://example.com');
+      expect(link?.attributes?.title).toBe('Example');
     });
     
     it('should parse a macro', () => {
@@ -151,8 +151,8 @@ describe('ConfluenceParser', () => {
       // Check macro
       const macro = document.elements[0];
       expect(macro.type).toBe(ConfluenceElementType.MACRO);
-      expect(macro.attributes.name).toBe('info');
-      expect(macro.attributes.parameters.title).toBe('Info Title');
+      expect(macro.attributes?.name).toBe('info');
+      expect(macro.attributes?.parameters?.title).toBe('Info Title');
       expect(macro.content).toBe('This is an info macro');
     });
   });
