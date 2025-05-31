@@ -1,3 +1,4 @@
+import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import { LinearClientWrapper } from '../../src/linear/client';
 import { handleLinearError } from '../../src/linear/error-handler';
 import { RateLimiter } from '../../src/linear/rate-limiter';

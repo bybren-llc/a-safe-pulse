@@ -7,15 +7,11 @@ import { RateLimiter } from '../../src/confluence/rate-limiter';
 jest.mock('axios');
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
-// Mock rate limiter
-const mockRateLimiterInstance = {
-  acquire: jest.fn().mockImplementation(() => Promise.resolve())
-};
-
-const MockedRateLimiter = jest.fn().mockImplementation(() => mockRateLimiterInstance);
-
+// Mock rate limiter - fix hoisting issue by using factory function
 jest.mock('../../src/confluence/rate-limiter', () => ({
-  RateLimiter: MockedRateLimiter
+  RateLimiter: jest.fn().mockImplementation(() => ({
+    acquire: jest.fn().mockImplementation(() => Promise.resolve())
+  }))
 }));
 
 describe('ConfluenceClient', () => {
