@@ -78,13 +78,13 @@ describe('SyncManager', () => {
     // Create instance with mocked dependencies
     syncManager = new SyncManager(options);
     
-    // Get mock instances
-    mockConfluenceClient = (ConfluenceClient as unknown) as jest.Mocked<ConfluenceClient>;
-    mockLinearClient = (LinearClientWrapper as unknown) as jest.Mocked<LinearClientWrapper>;
-    mockChangeDetector = (ChangeDetector as unknown) as jest.Mocked<ChangeDetector>;
-    mockConflictResolver = (ConflictResolver as unknown) as jest.Mocked<ConflictResolver>;
-    mockSyncStore = (SyncStore as unknown) as jest.Mocked<SyncStore>;
-    mockIssueCreator = (LinearIssueCreatorFromPlanning as unknown) as jest.Mocked<LinearIssueCreatorFromPlanning>;
+    // Get mock instances from created objects (proven pattern)
+    mockConfluenceClient = (syncManager as any).confluenceClient;
+    mockLinearClient = (syncManager as any).linearClient;
+    mockChangeDetector = (syncManager as any).changeDetector;
+    mockConflictResolver = (syncManager as any).conflictResolver;
+    mockSyncStore = (syncManager as any).syncStore;
+    mockIssueCreator = (syncManager as any).issueCreator;
   });
 
   afterEach(() => {

@@ -56,13 +56,9 @@ describe('ConflictResolver', () => {
     (ConfluenceClient as jest.Mock).mockImplementation(() => ({}));
     (LinearClientWrapper as jest.Mock).mockImplementation(() => ({}));
     (SyncStore as jest.Mock).mockImplementation(() => ({
-      // @ts-ignore - Jest mock type inference issue
       storeConflict: jest.fn().mockResolvedValue(undefined),
-      // @ts-ignore - Jest mock type inference issue
       storeResolvedConflict: jest.fn().mockResolvedValue(undefined),
-      // @ts-ignore - Jest mock type inference issue
       getUnresolvedConflicts: jest.fn().mockResolvedValue([]),
-      // @ts-ignore - Jest mock type inference issue
       getResolvedConflicts: jest.fn().mockResolvedValue([])
     }));
 
@@ -77,10 +73,10 @@ describe('ConflictResolver', () => {
       false // autoResolveConflicts
     );
 
-    // Get mock instances
-    mockConfluenceClient = (ConfluenceClient as unknown) as jest.Mocked<ConfluenceClient>;
-    mockLinearClient = (LinearClientWrapper as unknown) as jest.Mocked<LinearClientWrapper>;
-    mockSyncStore = (SyncStore as unknown) as jest.Mocked<SyncStore>;
+    // Get mock instances from created objects (proven pattern)
+    mockConfluenceClient = (conflictResolver as any).confluenceClient;
+    mockLinearClient = (conflictResolver as any).linearClient;
+    mockSyncStore = (conflictResolver as any).syncStore;
   });
 
   describe('resolveConflicts', () => {

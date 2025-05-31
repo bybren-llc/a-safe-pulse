@@ -28,14 +28,11 @@ describe('ChangeDetector', () => {
 
     // Setup mock implementations
     (ConfluenceClient as jest.Mock).mockImplementation(() => ({
-      // @ts-ignore - Jest mock type inference issue
       parsePageByUrl: jest.fn().mockResolvedValue({} as any),
-      // @ts-ignore - Jest mock type inference issue
       parsePage: jest.fn().mockResolvedValue({} as any)
     }));
 
     (LinearClientWrapper as jest.Mock).mockImplementation(() => ({
-      // @ts-ignore - Jest mock type inference issue
       executeQuery: jest.fn().mockResolvedValue({
         nodes: [
           {
@@ -59,7 +56,6 @@ describe('ChangeDetector', () => {
     }));
 
     (SyncStore as jest.Mock).mockImplementation(() => ({
-      // @ts-ignore - Jest mock type inference issue
       getLastSyncTimestamp: jest.fn().mockResolvedValue(lastSyncTimestamp as any)
     }));
 
@@ -122,11 +118,11 @@ describe('ChangeDetector', () => {
       syncStore
     );
     
-    // Get mock instances
-    mockConfluenceClient = (ConfluenceClient as unknown) as jest.Mocked<ConfluenceClient>;
-    mockLinearClient = (LinearClientWrapper as unknown) as jest.Mocked<LinearClientWrapper>;
-    mockSyncStore = (SyncStore as unknown) as jest.Mocked<SyncStore>;
-    mockPlanningExtractor = (PlanningExtractor as unknown) as jest.Mocked<PlanningExtractor>;
+    // Get mock instances from created objects (proven pattern)
+    mockConfluenceClient = (changeDetector as any).confluenceClient;
+    mockLinearClient = (changeDetector as any).linearClient;
+    mockSyncStore = (changeDetector as any).syncStore;
+    mockPlanningExtractor = new PlanningExtractor([], []) as jest.Mocked<PlanningExtractor>;
   });
 
   describe('detectChanges', () => {
@@ -172,8 +168,7 @@ describe('ChangeDetector', () => {
 
     it('should detect Confluence changes on first sync', async () => {
       // Arrange
-      // @ts-ignore - Jest mock type inference issue
-      (mockSyncStore.getLastSyncTimestamp as jest.Mock).mockResolvedValue(null as any);
+      mockSyncStore.getLastSyncTimestamp.mockResolvedValue(null as any);
 
       // Act
       const changes = await changeDetector.detectChanges(
@@ -212,8 +207,7 @@ describe('ChangeDetector', () => {
     it('should handle errors', async () => {
       // Arrange
       const error = new Error('Test error');
-      // @ts-ignore - Jest mock type inference issue
-      (mockLinearClient.executeQuery as jest.Mock).mockRejectedValue(error as any);
+      mockLinearClient.executeQuery.mockRejectedValue(error as any);
 
       // Act & Assert
       await expect(changeDetector.detectChanges(
