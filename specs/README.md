@@ -8,7 +8,7 @@ This directory contains all specifications, documentation, and workflow manageme
 
 Implementation specifications and stories ready for remote agent assignment.
 
-- **5 files** ready for immediate assignment
+- **2 files** ready for immediate assignment
 - Implementation documents for features and technical enablers
 - User stories and technical specifications
 
@@ -162,7 +162,7 @@ git mv specs/blocked/[filename] specs/todo/[filename]
 
 ## Current Status
 
-- **Todo**: 5 files ready for assignment
+- **Todo**: 2 files ready for assignment
 - **Doing**: 0 files (ready for active work)
 - **Done**: 4 completed implementations
 - **Blocked**: 0 blocked files
