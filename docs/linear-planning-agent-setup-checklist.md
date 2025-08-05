@@ -20,8 +20,8 @@ This document provides a comprehensive checklist for setting up and deploying th
 
 - [ ] Clone the repository
   ```bash
-  git clone https://github.com/ByBren-LLC/WTFB-Linear-agents.git
-  cd WTFB-Linear-agents
+  git clone https://github.com/ByBren-LLC/A-SAFe-Pulse.git
+  cd A-SAFe-Pulse
   ```
 
 - [ ] Create environment file
