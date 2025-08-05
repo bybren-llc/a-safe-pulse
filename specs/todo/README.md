@@ -4,7 +4,7 @@ This folder contains implementation specifications and user stories that are **r
 
 ## Current Status
 
-- **5 files** ready for assignment
+- **2 files** ready for assignment
 - All dependencies resolved
 - Implementation documents complete
 - Kickoff notes available
