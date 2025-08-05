@@ -5,12 +5,15 @@ This directory contains automation scripts for the WTFB Linear Agents project, s
 ## 🎯 Script Categories
 
 ### 📋 Planning Scripts
+
 Scripts for initializing new work and planning sessions.
 
 ### 🤖 Assignment Scripts
+
 Scripts for managing agent assignments and workflow automation.
 
 ### 📊 Utility Scripts
+
 Scripts for maintenance and status reporting.
 
 ---
@@ -22,16 +25,19 @@ Scripts for maintenance and status reporting.
 Initializes a planning agent with instructions to analyze Confluence documentation and create properly structured Linear issues following SAFe methodology.
 
 #### Usage
+
 ```bash
 ./scripts/start-planning-agent.sh [CONFLUENCE_PAGE_URL] [PLANNING_TITLE]
 ```
 
 #### Example
+
 ```bash
 ./scripts/start-planning-agent.sh "https://cheddarfox.atlassian.net/wiki/spaces/WA/pages/123456789" "Collaborative Screenplay Editing"
 ```
 
 #### Features
+
 - Creates planning instructions file with task context
 - Generates proper filename from planning title
 - Validates required template files exist
@@ -39,6 +45,7 @@ Initializes a planning agent with instructions to analyze Confluence documentati
 - Follows SAFe methodology for work breakdown
 
 #### Output
+
 - Creates `specs/planning_instructions_[title].md` with complete agent instructions
 - Provides command to start Augment agent with proper context
 
@@ -53,62 +60,81 @@ Complete agent assignment workflow automation supporting any type of SWE agent (
 #### Commands
 
 ##### List Available Work
+
 ```bash
 ./scripts/assign-agents.sh list
 ```
+
 Shows all work items in `/todo` with their status:
+
 - ✅ Kickoff notes available
 - 📋 Assignment templates ready
 - ⚠️ Missing dependencies
 
 ##### Show Assignment Status
+
 ```bash
 ./scripts/assign-agents.sh status
 ```
+
 Displays current WIP status and active assignments:
+
 - Todo/Doing/Done file counts
 - Current assignment summaries
 
 ##### Prepare Work Package
+
 ```bash
 ./scripts/assign-agents.sh prepare
 ```
+
 Prepares current work package for agent deployment:
+
 - Shows available assignments
 - Provides deployment guidance
 - Lists next steps for assignment
 
 ##### Update Current Assignments
+
 ```bash
 ./scripts/assign-agents.sh update-current
 ```
+
 Updates current assignments with latest work package:
+
 - Copies latest assignments to `specs/remote_agent_assignments/current.md`
 - Fixes branch references (main → dev)
 - Creates backup of previous assignments
 
 ##### Move Files Through Workflow
+
 ```bash
 ./scripts/assign-agents.sh move [filename] [target_folder]
 ```
+
 Moves files through WIP workflow stages:
+
 - `todo` → `doing` (when agent starts work)
 - `doing` → `done` (when work completes)
 - Supports any WIP folder transition
 - Uses `git mv` for proper version control
 
 ##### Help and Documentation
+
 ```bash
 ./scripts/assign-agents.sh help
 ```
+
 Shows complete command reference and workflow example.
 
 #### Supported Agent Types
+
 - **Augment Code Remote** - Full-featured remote agents
 - **Claude CLI** - Command-line interface agents
 - **Any SWE Agent** - Supporting GitHub, Linear, branch/PR workflows
 
 #### Features
+
 - Color-coded output for better readability
 - Automatic file discovery and status checking
 - Proper git integration for file movement
@@ -124,11 +150,13 @@ Shows complete command reference and workflow example.
 Programmatically updates file counts in all WIP folder README files.
 
 #### Usage
+
 ```bash
 ./scripts/update-wip-counts.sh
 ```
 
 #### Features
+
 - Counts `.md` files in all WIP folders (excluding README.md)
 - Updates `specs/README.md` with accurate counts
 - Updates `specs/todo/README.md` with todo-specific counts
@@ -136,6 +164,7 @@ Programmatically updates file counts in all WIP folder README files.
 - Eliminates manual count maintenance
 
 #### Output
+
 - Updated file counts in README files
 - Summary of changes made
 - Git commit command suggestions
@@ -199,6 +228,7 @@ When adding new scripts to this directory:
 ### Dependencies
 
 Scripts may require:
+
 - Git (for file movement and version control)
 - Linear CLI (for issue management)
 - Augment CLI (for agent startup)
@@ -217,5 +247,6 @@ These scripts integrate with:
 - **Remote agents** across multiple platforms
 
 For detailed workflow documentation, see:
+
 - `specs/README.md` - Complete WIP methodology
 - `specs/templates/remote_agent_workflow.md` - Agent workflow details

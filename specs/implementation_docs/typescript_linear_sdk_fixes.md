@@ -24,6 +24,7 @@ As a **Development Team**, I need to **resolve TypeScript compilation errors in 
 ## Technical Context
 
 Linear SDK v2.6.0 introduced breaking changes in several areas:
+
 - Response object structure (removed `.error` property, changed async access patterns)
 - Enum value requirements (string literals replaced with enum constants)
 - DateTime type strictness (Date objects vs ISO strings)
@@ -32,6 +33,7 @@ Linear SDK v2.6.0 introduced breaking changes in several areas:
 ### Existing Code
 
 The following files contain Linear SDK integration code that needs updating:
+
 - `src/safe/safe_linear_implementation.ts` - Core SAFe to Linear mapping
 - `src/safe/relationship-updater.ts` - Issue relationship management
 - `src/safe/hierarchy-manager.ts` - SAFe hierarchy operations
@@ -49,6 +51,7 @@ The following files contain Linear SDK integration code that needs updating:
 ### 1. Linear SDK Response Pattern Updates
 
 **Current Broken Pattern:**
+
 ```typescript
 const response = await this.linearClient.issueCreate(issueData);
 if (response.error) {
@@ -58,6 +61,7 @@ const issueId = response.issue.id;
 ```
 
 **Correct v2.6.0 Pattern:**
+
 ```typescript
 const response = await this.linearClient.issueCreate(issueData);
 if (!response.success) {
@@ -68,6 +72,7 @@ const issueId = issue.id;
 ```
 
 **Files to Update:**
+
 - `src/safe/safe_linear_implementation.ts` (lines 55, 106, 146, 193, 230, 261)
 - `src/safe/relationship-updater.ts` (line 56)
 - `src/safe/pi-planning.ts` (line 658)
@@ -75,6 +80,7 @@ const issueId = issue.id;
 ### 2. Enum Value Corrections
 
 **Current Broken Pattern:**
+
 ```typescript
 await this.linearClient.issueRelationCreate({
   issueId: parentId,
@@ -84,6 +90,7 @@ await this.linearClient.issueRelationCreate({
 ```
 
 **Correct v2.6.0 Pattern:**
+
 ```typescript
 import { IssueRelationType } from '@linear/sdk';
 
@@ -95,12 +102,14 @@ await this.linearClient.issueRelationCreate({
 ```
 
 **Files to Update:**
+
 - `src/safe/relationship-updater.ts` (lines 118, 158)
 - `src/safe/pi-planning.ts` (line 430)
 
 ### 3. DateTime Type Fixes
 
 **Current Broken Pattern:**
+
 ```typescript
 const cycleData = {
   name: piName,
@@ -110,6 +119,7 @@ const cycleData = {
 ```
 
 **Correct v2.6.0 Pattern:**
+
 ```typescript
 const cycleData = {
   name: piName,
@@ -119,54 +129,64 @@ const cycleData = {
 ```
 
 **Files to Update:**
+
 - `src/safe/safe_linear_implementation.ts` (lines 225, 226)
 - `src/safe/pi-planning.ts` (lines 315, 316)
 
 ### 4. Async Issue Access Updates
 
 **Current Broken Pattern:**
+
 ```typescript
 const currentParentId = enabler.parent?.id || null;
 ```
 
 **Correct v2.6.0 Pattern:**
+
 ```typescript
 const parent = enabler.parent ? await enabler.parent : null;
 const currentParentId = parent?.id || null;
 ```
 
 **Files to Update:**
+
 - `src/safe/hierarchy-manager.ts` (line 310)
 - `src/safe/relationship-updater.ts` (line 39)
 
 ### 5. PlanningExtractor Constructor Fix
 
 **Current Broken Pattern:**
+
 ```typescript
 const extractor = new PlanningExtractor(document);
 ```
 
 **Correct Pattern (check constructor signature):**
+
 ```typescript
 const extractor = new PlanningExtractor(document, sections);
 ```
 
 **Files to Update:**
+
 - `src/sync/change-detector.ts` (line 332)
 
 ### 6. Implicit Any Type Fixes
 
 **Current Broken Pattern:**
+
 ```typescript
 const labelNames = labels.map(label => label.name);
 ```
 
 **Correct Pattern:**
+
 ```typescript
 const labelNames = labels.map((label: { name: string }) => label.name);
 ```
 
 **Files to Update:**
+
 - `src/sync/change-detector.ts` (line 267)
 
 ## Testing Approach

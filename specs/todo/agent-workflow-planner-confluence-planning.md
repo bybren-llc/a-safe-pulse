@@ -215,7 +215,9 @@ workflow:
 - **Dependencies:** Core engine completion
 
 #### Agent #5: Startup Stack Specialist
+
 **Assignment:** Build Notion + Slack integration
+
 - **Scope:** Story 2.4 (Notion + Slack)
 - **Skills Required:** Notion API, Slack webhooks
 - **Timeline:** 1.5 weeks
