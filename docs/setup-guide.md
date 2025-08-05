@@ -253,8 +253,8 @@ The Linear Planning Agent uses both PostgreSQL and SQLite databases:
 
 1. **Clone the Repository**:
    ```bash
-   git clone https://github.com/ByBren-LLC/WTFB-Linear-agents.git
-   cd WTFB-Linear-agents
+   git clone https://github.com/ByBren-LLC/A-SAFe-Pulse.git
+   cd A-SAFe-Pulse
    ```
 
 2. **Create Environment File**:
@@ -278,8 +278,8 @@ The Linear Planning Agent uses both PostgreSQL and SQLite databases:
 
 1. **Clone the Repository**:
    ```bash
-   git clone https://github.com/ByBren-LLC/WTFB-Linear-agents.git
-   cd WTFB-Linear-agents
+   git clone https://github.com/ByBren-LLC/A-SAFe-Pulse.git
+   cd A-SAFe-Pulse
    ```
 
 2. **Install Dependencies**:
