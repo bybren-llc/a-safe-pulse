@@ -24,7 +24,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ByBren-LLC/WTFB-Linear-agents.git"
+    "url": "git+https://github.com/ByBren-LLC/A-SAFe-Pulse.git"
   },
   "keywords": [
     "linear",
@@ -36,9 +36,9 @@
   "author": "Words to Film By",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/ByBren-LLC/WTFB-Linear-agents/issues"
+    "url": "https://github.com/ByBren-LLC/A-SAFe-Pulse/issues"
   },
-  "homepage": "https://github.com/ByBren-LLC/WTFB-Linear-agents#readme",
+  "homepage": "https://github.com/ByBren-LLC/A-SAFe-Pulse#readme",
   "dependencies": {
     "@linear/sdk": "^2.6.0",
     "@types/express-session": "^1.18.1",

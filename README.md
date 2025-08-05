@@ -42,8 +42,8 @@ This agent is designed for enterprise automation and agent-to-agent workflows, m
 
 1. Clone the repository
    ```bash
-   git clone https://github.com/ByBren-LLC/WTFB-Linear-agents.git
-   cd WTFB-Linear-agents
+   git clone https://github.com/ByBren-LLC/A-SAFe-Pulse.git
+   cd A-SAFe-Pulse
    ```
 
 2. Install dependencies
