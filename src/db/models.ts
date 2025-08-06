@@ -1297,7 +1297,8 @@ export const getConfluenceAccessToken = async (organizationId: string): Promise<
       return await refreshConfluenceToken(organizationId);
     }
 
-    return token.access_token;
+    // Decrypt the access token before returning
+    return decryptToken(token.access_token);
   } catch (error) {
     logger.error('Error retrieving Confluence access token', { error, organizationId });
     throw error;

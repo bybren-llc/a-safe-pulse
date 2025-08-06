@@ -7,11 +7,12 @@
 
 import axios from 'axios';
 import * as logger from '../utils/logger';
-import { 
-  storeConfluenceToken, 
-  getConfluenceToken, 
-  getConfluenceAccessToken 
+import {
+  storeConfluenceToken,
+  getConfluenceToken,
+  getConfluenceAccessToken
 } from '../db/models';
+import { encryptToken, decryptToken } from './tokens';
 
 /**
  * Initiates the Confluence OAuth flow
@@ -123,12 +124,16 @@ export const handleConfluenceCallback = async (req: any, res: any): Promise<void
     // Calculate expiration date
     const expiresAt = new Date();
     expiresAt.setSeconds(expiresAt.getSeconds() + expires_in);
-    
-    // Store the tokens in the database
+
+    // Encrypt tokens before storage for security
+    const encryptedAccessToken = encryptToken(access_token);
+    const encryptedRefreshToken = encryptToken(refresh_token);
+
+    // Store the encrypted tokens in the database
     await storeConfluenceToken(
       organizationId,
-      access_token,
-      refresh_token,
+      encryptedAccessToken,
+      encryptedRefreshToken,
       siteUrl,
       expiresAt
     );
@@ -167,12 +172,15 @@ export const refreshConfluenceToken = async (organizationId: string): Promise<st
       return null;
     }
     
+    // Decrypt the refresh token before using it
+    const decryptedRefreshToken = decryptToken(tokenData.refresh_token);
+
     // Exchange the refresh token for a new access token
     const tokenResponse = await axios.post('https://auth.atlassian.com/oauth/token', {
       grant_type: 'refresh_token',
       client_id: clientId,
       client_secret: clientSecret,
-      refresh_token: tokenData.refresh_token
+      refresh_token: decryptedRefreshToken
     });
     
     const { 
@@ -189,12 +197,16 @@ export const refreshConfluenceToken = async (organizationId: string): Promise<st
     // Calculate new expiration date
     const expiresAt = new Date();
     expiresAt.setSeconds(expiresAt.getSeconds() + expires_in);
-    
-    // Store the new tokens
+
+    // Encrypt new tokens before storage
+    const encryptedAccessToken = encryptToken(access_token);
+    const encryptedRefreshToken = refresh_token ? encryptToken(refresh_token) : tokenData.refresh_token;
+
+    // Store the new encrypted tokens
     await storeConfluenceToken(
       organizationId,
-      access_token,
-      refresh_token || tokenData.refresh_token, // Use the new refresh token if provided, otherwise keep the old one
+      encryptedAccessToken,
+      encryptedRefreshToken,
       tokenData.site_url,
       expiresAt
     );

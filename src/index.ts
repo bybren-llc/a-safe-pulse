@@ -24,8 +24,12 @@ const port = process.env.PORT || 3000;
 app.use(express.json());
 
 // Session middleware for OAuth state management
+if (!process.env.SESSION_SECRET) {
+  throw new Error('SESSION_SECRET environment variable is required');
+}
+
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'default-secret-change-in-production',
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {

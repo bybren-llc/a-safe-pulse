@@ -40,7 +40,7 @@ const getEncryptionKey = (): Buffer => {
 /**
  * Encrypts a token using secure AES-256-CBC with random IV
  */
-const encryptToken = (token: string): string => {
+export const encryptToken = (token: string): string => {
   if (!token) return token;
 
   try {
@@ -62,7 +62,7 @@ const encryptToken = (token: string): string => {
 /**
  * Decrypts a token using secure AES-256-CBC
  */
-const decryptToken = (encryptedData: string): string => {
+export const decryptToken = (encryptedData: string): string => {
   if (!encryptedData || !encryptedData.includes(':')) {
     // Handle legacy unencrypted tokens gracefully
     return encryptedData;

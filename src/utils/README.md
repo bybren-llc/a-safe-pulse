@@ -5,7 +5,7 @@ This module provides essential utility functions and helper services for the SAF
 ## Features
 
 - **Structured Logging**: Consistent JSON-based logging with metadata support
-- **Secure Encryption**: AES-256 encryption for sensitive data storage
+- **Secure Token Management**: OAuth token encryption handled by auth/tokens.ts
 - **Response Templates**: Standardized agent communication templates
 - **Notification Coordination**: Centralized operational intelligence coordination
 - **Environment-Aware Configuration**: Automatic configuration based on deployment environment
@@ -29,10 +29,11 @@ The utility system provides foundational services used throughout SAFe PULSE:
 ```
 src/utils/
 ├── logger.ts                           # Structured logging utility
-├── encryption.ts                       # AES-256 encryption for sensitive data
 ├── templates.ts                        # Agent response templates
 └── operational-notification-coordinator.ts  # Centralized notification management
 ```
+
+**Note**: Token encryption is now handled by `src/auth/tokens.ts` using secure Node.js crypto.
 
 ### Utility Integration
 
