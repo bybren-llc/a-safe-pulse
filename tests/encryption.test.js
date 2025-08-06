@@ -1,8 +1,8 @@
 // Simple test for encryption utility
 const crypto = require('crypto-js');
 
-// Mock environment variables
-process.env.ENCRYPTION_KEY = 'test-encryption-key-for-unit-tests';
+// Mock environment variables (64-character hex key for AES-256)
+process.env.ENCRYPTION_KEY = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
 // Mock the logger
 jest.mock('../src/utils/logger', () => ({

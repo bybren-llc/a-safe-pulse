@@ -5,8 +5,8 @@
  * of the token management system without relying on the database.
  */
 
-// Set up environment variables for testing
-process.env.ENCRYPTION_KEY = 'test-encryption-key-for-unit-tests';
+// Set up environment variables for testing (64-character hex key for AES-256)
+process.env.ENCRYPTION_KEY = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 process.env.LINEAR_CLIENT_ID = 'test-client-id';
 process.env.LINEAR_CLIENT_SECRET = 'test-client-secret';
 

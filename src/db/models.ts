@@ -4,22 +4,55 @@ import { runMigrations } from './migrations';
 import crypto from 'crypto';
 
 /**
- * Token decryption utility
+ * Token decryption utility using secure AES-256-CBC
  */
 const ALGORITHM = 'aes-256-cbc';
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-key-change-in-production-32-chars';
 
 /**
- * Decrypts a token using AES-256-CBC
+ * Gets the encryption key as a Buffer, ensuring it's 32 bytes for AES-256
  */
-const decryptToken = (encryptedToken: string): string => {
-  if (!encryptedToken || !encryptedToken.includes(':')) return encryptedToken;
+const getEncryptionKey = (): Buffer => {
+  const keyHex = process.env.ENCRYPTION_KEY;
+
+  if (!keyHex) {
+    throw new Error('ENCRYPTION_KEY environment variable is required');
+  }
 
   try {
-    const [ivHex, encrypted] = encryptedToken.split(':');
-    const decipher = crypto.createDecipher(ALGORITHM, ENCRYPTION_KEY);
+    const key = Buffer.from(keyHex, 'hex');
+    if (key.length !== 32) {
+      throw new Error('ENCRYPTION_KEY must be 32 bytes (64 hex characters) for AES-256');
+    }
+    return key;
+  } catch (error) {
+    throw new Error('ENCRYPTION_KEY must be a valid hex string (64 characters)');
+  }
+};
+
+/**
+ * Decrypts a token using secure AES-256-CBC
+ */
+const decryptToken = (encryptedData: string): string => {
+  if (!encryptedData || !encryptedData.includes(':')) {
+    // Handle legacy unencrypted tokens gracefully
+    return encryptedData;
+  }
+
+  try {
+    const key = getEncryptionKey();
+    const parts = encryptedData.split(':');
+
+    if (parts.length !== 2) {
+      throw new Error('Invalid encrypted data format');
+    }
+
+    const iv = Buffer.from(parts[0], 'hex');
+    const encrypted = parts[1];
+
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
     let decrypted = decipher.update(encrypted, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
+
     return decrypted;
   } catch (error) {
     logger.error('Error decrypting token', { error });
