@@ -1,6 +1,31 @@
 import { query, getClient } from './connection';
 import * as logger from '../utils/logger';
 import { runMigrations } from './migrations';
+import crypto from 'crypto';
+
+/**
+ * Token decryption utility
+ */
+const ALGORITHM = 'aes-256-cbc';
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-key-change-in-production-32-chars';
+
+/**
+ * Decrypts a token using AES-256-CBC
+ */
+const decryptToken = (encryptedToken: string): string => {
+  if (!encryptedToken || !encryptedToken.includes(':')) return encryptedToken;
+
+  try {
+    const [ivHex, encrypted] = encryptedToken.split(':');
+    const decipher = crypto.createDecipher(ALGORITHM, ENCRYPTION_KEY);
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+  } catch (error) {
+    logger.error('Error decrypting token', { error });
+    throw new Error('Token decryption failed');
+  }
+};
 
 // Mock database interface for testing
 export interface DatabaseInterface {
@@ -567,7 +592,8 @@ export const getAccessToken = async (organizationId: string): Promise<string | n
       return null;
     }
 
-    return token.access_token;
+    // Decrypt the access token before returning
+    return decryptToken(token.access_token);
   } catch (error) {
     logger.error('Error retrieving access token', { error, organizationId });
     throw error;

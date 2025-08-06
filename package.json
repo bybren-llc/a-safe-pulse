@@ -48,6 +48,7 @@
     "crypto-js": "^4.2.0",
     "dotenv": "^16.5.0",
     "express": "^4.21.2",
+    "express-rate-limit": "^8.0.1",
     "express-session": "^1.18.1",
     "jsdom": "^26.1.0",
     "jsonwebtoken": "^9.0.2",

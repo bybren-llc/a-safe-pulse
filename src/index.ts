@@ -1,5 +1,6 @@
 import express from 'express';
 import session from 'express-session';
+import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import { initiateOAuth, handleOAuthCallback } from './auth/oauth';
 import { initiateConfluenceOAuth, handleConfluenceCallback } from './auth/confluence-oauth';
@@ -34,6 +35,29 @@ app.use(session({
   }
 }));
 
+// Rate limiting for OAuth endpoints to prevent abuse
+const oauthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // limit each IP to 5 OAuth requests per windowMs
+  message: {
+    error: 'Too many OAuth requests from this IP, please try again later.',
+    retryAfter: '15 minutes'
+  },
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  handler: (req, res) => {
+    logger.warn('OAuth rate limit exceeded', {
+      ip: req.ip,
+      userAgent: req.get('User-Agent'),
+      path: req.path
+    });
+    res.status(429).json({
+      error: 'Too many OAuth requests from this IP, please try again later.',
+      retryAfter: '15 minutes'
+    });
+  }
+});
+
 // Routes
 app.get('/', (req, res) => {
   res.send('WTFB Linear Planning Agent is running');
@@ -44,13 +68,13 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
-// OAuth routes
-app.get('/auth', initiateOAuth);
-app.get('/auth/callback', handleOAuthCallback);
+// OAuth routes with rate limiting
+app.get('/auth', oauthLimiter, initiateOAuth);
+app.get('/auth/callback', oauthLimiter, handleOAuthCallback);
 
-// Confluence OAuth routes
-app.get('/auth/confluence', initiateConfluenceOAuth);
-app.get('/auth/confluence/callback', handleConfluenceCallback);
+// Confluence OAuth routes with rate limiting
+app.get('/auth/confluence', oauthLimiter, initiateConfluenceOAuth);
+app.get('/auth/confluence/callback', oauthLimiter, handleConfluenceCallback);
 
 // OAuth success pages
 app.get('/auth/success', (req, res) => {

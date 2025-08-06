@@ -3,12 +3,55 @@
  *
  * This module provides functions for securely storing, retrieving, refreshing,
  * and revoking Linear OAuth tokens. Tokens are stored in the database with
- * encryption for security.
+ * AES-256-CBC encryption for security.
  */
 
 import axios from 'axios';
+import crypto from 'crypto';
 import * as logger from '../utils/logger';
 import { storeLinearToken, getLinearToken, getAccessToken as getDbAccessToken, deleteLinearToken } from '../db/models';
+
+/**
+ * Encryption utilities for token security
+ */
+const ALGORITHM = 'aes-256-cbc';
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-key-change-in-production-32-chars';
+
+/**
+ * Encrypts a token using AES-256-CBC
+ */
+const encryptToken = (token: string): string => {
+  if (!token) return token;
+
+  try {
+    const iv = crypto.randomBytes(16);
+    const cipher = crypto.createCipher(ALGORITHM, ENCRYPTION_KEY);
+    let encrypted = cipher.update(token, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    return iv.toString('hex') + ':' + encrypted;
+  } catch (error) {
+    logger.error('Error encrypting token', { error });
+    throw new Error('Token encryption failed');
+  }
+};
+
+/**
+ * Decrypts a token using AES-256-CBC
+ */
+const decryptToken = (encryptedToken: string): string => {
+  if (!encryptedToken || !encryptedToken.includes(':')) return encryptedToken;
+
+  try {
+    const [ivHex, encrypted] = encryptedToken.split(':');
+    const decipher = crypto.createDecipher(ALGORITHM, ENCRYPTION_KEY);
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+  } catch (error) {
+    logger.error('Error decrypting token', { error });
+    throw new Error('Token decryption failed');
+  }
+};
 
 /**
  * Stores OAuth tokens for a Linear organization
@@ -33,16 +76,20 @@ export const storeTokens = async (
     const expiresAt = new Date();
     expiresAt.setSeconds(expiresAt.getSeconds() + expiresIn);
 
-    // Store tokens in the database
+    // Encrypt tokens before storage
+    const encryptedAccessToken = encryptToken(accessToken);
+    const encryptedRefreshToken = refreshToken ? encryptToken(refreshToken) : null;
+
+    // Store encrypted tokens in the database
     await storeLinearToken(
       organizationId,
-      accessToken,
-      refreshToken,
+      encryptedAccessToken,
+      encryptedRefreshToken,
       appUserId,
       expiresAt
     );
 
-    logger.info('Tokens stored for organization', { organizationId });
+    logger.info('Encrypted tokens stored for organization', { organizationId });
   } catch (error) {
     logger.error('Error storing tokens', { error, organizationId });
     throw error;
@@ -70,6 +117,9 @@ export const refreshToken = async (organizationId: string): Promise<string | nul
       return null;
     }
 
+    // Decrypt the refresh token
+    const decryptedRefreshToken = decryptToken(tokenData.refresh_token);
+
     const clientId = process.env.LINEAR_CLIENT_ID;
     const clientSecret = process.env.LINEAR_CLIENT_SECRET;
 
@@ -82,7 +132,7 @@ export const refreshToken = async (organizationId: string): Promise<string | nul
     const tokenResponse = await axios.post('https://api.linear.app/oauth/token', {
       client_id: clientId,
       client_secret: clientSecret,
-      refresh_token: tokenData.refresh_token,
+      refresh_token: decryptedRefreshToken,
       grant_type: 'refresh_token'
     });
 
@@ -97,11 +147,15 @@ export const refreshToken = async (organizationId: string): Promise<string | nul
     const expiresAt = new Date();
     expiresAt.setSeconds(expiresAt.getSeconds() + expires_in);
 
-    // Store the new tokens
+    // Encrypt new tokens before storage
+    const encryptedAccessToken = encryptToken(access_token);
+    const encryptedRefreshToken = refresh_token ? encryptToken(refresh_token) : tokenData.refresh_token;
+
+    // Store the new encrypted tokens
     await storeLinearToken(
       organizationId,
-      access_token,
-      refresh_token || tokenData.refresh_token, // Use the new refresh token if provided, otherwise keep the old one
+      encryptedAccessToken,
+      encryptedRefreshToken,
       tokenData.app_user_id,
       expiresAt
     );
