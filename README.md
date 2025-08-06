@@ -83,9 +83,14 @@ This agent is designed for enterprise automation and agent-to-agent workflows, m
    ```
 
    **OAuth Flow Order**:
-   1. ✅ **Linear OAuth first** - Creates organization record
+   1. ✅ **Linear OAuth first** - Creates organization record and enables @saafepulse agent
    2. ✅ **Confluence OAuth second** - References the organization record
    3. ✅ **Verify tokens stored** - Check database for both token types
+
+   **Agent Capabilities After OAuth**:
+   - ✅ **@saafepulse mentions in Linear** - Fully functional agent with command parsing
+   - ✅ **Slack notifications** - Operational intelligence and planning updates
+   - ✅ **Webhook processing** - Automated responses to Linear events
 
 5. Build the CLI
    ```bash
