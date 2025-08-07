@@ -173,6 +173,10 @@ export const refreshConfluenceToken = async (organizationId: string): Promise<st
     }
     
     // Decrypt the refresh token before using it
+    if (!tokenData.refresh_token) {
+      logger.error('No refresh token available for Confluence token refresh');
+      return null;
+    }
     const decryptedRefreshToken = decryptToken(tokenData.refresh_token);
 
     // Exchange the refresh token for a new access token
@@ -200,7 +204,7 @@ export const refreshConfluenceToken = async (organizationId: string): Promise<st
 
     // Encrypt new tokens before storage
     const encryptedAccessToken = encryptToken(access_token);
-    const encryptedRefreshToken = refresh_token ? encryptToken(refresh_token) : tokenData.refresh_token;
+    const encryptedRefreshToken = refresh_token ? encryptToken(refresh_token) : tokenData.refresh_token!;
 
     // Store the new encrypted tokens
     await storeConfluenceToken(
