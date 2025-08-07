@@ -6,6 +6,9 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 
+# Copy source code
+COPY . .
+
 # Create data directory for SQLite
 RUN mkdir -p /app/data
 
