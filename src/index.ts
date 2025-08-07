@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import session from 'express-session';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
@@ -49,7 +49,7 @@ const oauthLimiter = rateLimit({
   },
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-  handler: (req, res) => {
+  handler: (req: Request, res: Response) => {
     logger.warn('OAuth rate limit exceeded', {
       ip: req.ip,
       userAgent: req.get('User-Agent'),
