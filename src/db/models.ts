@@ -1,6 +1,64 @@
 import { query, getClient } from './connection';
 import * as logger from '../utils/logger';
 import { runMigrations } from './migrations';
+import crypto from 'crypto';
+
+/**
+ * Token decryption utility using secure AES-256-CBC
+ */
+const ALGORITHM = 'aes-256-cbc';
+
+/**
+ * Gets the encryption key as a Buffer, ensuring it's 32 bytes for AES-256
+ */
+const getEncryptionKey = (): Buffer => {
+  const keyHex = process.env.ENCRYPTION_KEY;
+
+  if (!keyHex) {
+    throw new Error('ENCRYPTION_KEY environment variable is required');
+  }
+
+  try {
+    const key = Buffer.from(keyHex, 'hex');
+    if (key.length !== 32) {
+      throw new Error('ENCRYPTION_KEY must be 32 bytes (64 hex characters) for AES-256');
+    }
+    return key;
+  } catch (error) {
+    throw new Error('ENCRYPTION_KEY must be a valid hex string (64 characters)');
+  }
+};
+
+/**
+ * Decrypts a token using secure AES-256-CBC
+ */
+const decryptToken = (encryptedData: string): string => {
+  if (!encryptedData || !encryptedData.includes(':')) {
+    // Handle legacy unencrypted tokens gracefully
+    return encryptedData;
+  }
+
+  try {
+    const key = getEncryptionKey();
+    const parts = encryptedData.split(':');
+
+    if (parts.length !== 2) {
+      throw new Error('Invalid encrypted data format');
+    }
+
+    const iv = Buffer.from(parts[0], 'hex');
+    const encrypted = parts[1];
+
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+
+    return decrypted;
+  } catch (error) {
+    logger.error('Error decrypting token', { error });
+    throw new Error('Token decryption failed');
+  }
+};
 
 // Mock database interface for testing
 export interface DatabaseInterface {
@@ -567,7 +625,8 @@ export const getAccessToken = async (organizationId: string): Promise<string | n
       return null;
     }
 
-    return token.access_token;
+    // Decrypt the access token before returning
+    return decryptToken(token.access_token);
   } catch (error) {
     logger.error('Error retrieving access token', { error, organizationId });
     throw error;
@@ -1238,7 +1297,8 @@ export const getConfluenceAccessToken = async (organizationId: string): Promise<
       return await refreshConfluenceToken(organizationId);
     }
 
-    return token.access_token;
+    // Decrypt the access token before returning
+    return decryptToken(token.access_token);
   } catch (error) {
     logger.error('Error retrieving Confluence access token', { error, organizationId });
     throw error;

@@ -3,12 +3,92 @@
  *
  * This module provides functions for securely storing, retrieving, refreshing,
  * and revoking Linear OAuth tokens. Tokens are stored in the database with
- * encryption for security.
+ * AES-256-CBC encryption for security.
  */
 
 import axios from 'axios';
+import crypto from 'crypto';
 import * as logger from '../utils/logger';
 import { storeLinearToken, getLinearToken, getAccessToken as getDbAccessToken, deleteLinearToken } from '../db/models';
+
+/**
+ * Encryption utilities for token security using secure AES-256-CBC
+ */
+const ALGORITHM = 'aes-256-cbc';
+
+/**
+ * Gets the encryption key as a Buffer, ensuring it's 32 bytes for AES-256
+ */
+const getEncryptionKey = (): Buffer => {
+  const keyHex = process.env.ENCRYPTION_KEY;
+
+  if (!keyHex) {
+    throw new Error('ENCRYPTION_KEY environment variable is required');
+  }
+
+  try {
+    const key = Buffer.from(keyHex, 'hex');
+    if (key.length !== 32) {
+      throw new Error('ENCRYPTION_KEY must be 32 bytes (64 hex characters) for AES-256');
+    }
+    return key;
+  } catch (error) {
+    throw new Error('ENCRYPTION_KEY must be a valid hex string (64 characters)');
+  }
+};
+
+/**
+ * Encrypts a token using secure AES-256-CBC with random IV
+ */
+export const encryptToken = (token: string): string => {
+  if (!token) return token;
+
+  try {
+    const key = getEncryptionKey();
+    const iv = crypto.randomBytes(16); // Generate random IV for each encryption
+
+    const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+    let encrypted = cipher.update(token, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+
+    // Return IV + encrypted data (IV needed for decryption)
+    return iv.toString('hex') + ':' + encrypted;
+  } catch (error) {
+    logger.error('Error encrypting token', { error });
+    throw new Error('Token encryption failed');
+  }
+};
+
+/**
+ * Decrypts a token using secure AES-256-CBC
+ */
+export const decryptToken = (encryptedData: string): string => {
+  if (!encryptedData || !encryptedData.includes(':')) {
+    // Handle legacy unencrypted tokens gracefully
+    return encryptedData;
+  }
+
+  try {
+    const key = getEncryptionKey();
+    const parts = encryptedData.split(':');
+
+    if (parts.length !== 2) {
+      throw new Error('Invalid encrypted data format');
+    }
+
+    const iv = Buffer.from(parts[0], 'hex');
+    const encrypted = parts[1];
+
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+
+    return decrypted;
+  } catch (error) {
+    logger.error('Error decrypting token', { error });
+    throw new Error('Token decryption failed');
+  }
+};
 
 /**
  * Stores OAuth tokens for a Linear organization
@@ -33,16 +113,20 @@ export const storeTokens = async (
     const expiresAt = new Date();
     expiresAt.setSeconds(expiresAt.getSeconds() + expiresIn);
 
-    // Store tokens in the database
+    // Encrypt tokens before storage
+    const encryptedAccessToken = encryptToken(accessToken);
+    const encryptedRefreshToken = refreshToken ? encryptToken(refreshToken) : null;
+
+    // Store encrypted tokens in the database
     await storeLinearToken(
       organizationId,
-      accessToken,
-      refreshToken,
+      encryptedAccessToken,
+      encryptedRefreshToken,
       appUserId,
       expiresAt
     );
 
-    logger.info('Tokens stored for organization', { organizationId });
+    logger.info('Encrypted tokens stored for organization', { organizationId });
   } catch (error) {
     logger.error('Error storing tokens', { error, organizationId });
     throw error;
@@ -70,6 +154,9 @@ export const refreshToken = async (organizationId: string): Promise<string | nul
       return null;
     }
 
+    // Decrypt the refresh token
+    const decryptedRefreshToken = decryptToken(tokenData.refresh_token);
+
     const clientId = process.env.LINEAR_CLIENT_ID;
     const clientSecret = process.env.LINEAR_CLIENT_SECRET;
 
@@ -82,7 +169,7 @@ export const refreshToken = async (organizationId: string): Promise<string | nul
     const tokenResponse = await axios.post('https://api.linear.app/oauth/token', {
       client_id: clientId,
       client_secret: clientSecret,
-      refresh_token: tokenData.refresh_token,
+      refresh_token: decryptedRefreshToken,
       grant_type: 'refresh_token'
     });
 
@@ -97,11 +184,15 @@ export const refreshToken = async (organizationId: string): Promise<string | nul
     const expiresAt = new Date();
     expiresAt.setSeconds(expiresAt.getSeconds() + expires_in);
 
-    // Store the new tokens
+    // Encrypt new tokens before storage
+    const encryptedAccessToken = encryptToken(access_token);
+    const encryptedRefreshToken = refresh_token ? encryptToken(refresh_token) : tokenData.refresh_token;
+
+    // Store the new encrypted tokens
     await storeLinearToken(
       organizationId,
-      access_token,
-      refresh_token || tokenData.refresh_token, // Use the new refresh token if provided, otherwise keep the old one
+      encryptedAccessToken,
+      encryptedRefreshToken,
       tokenData.app_user_id,
       expiresAt
     );

@@ -59,7 +59,40 @@ This agent is designed for enterprise automation and agent-to-agent workflows, m
 
    **⚠️ IMPORTANT**: OAuth setup is required! See [OAuth Setup Guide](docs/oauth-setup.md) for detailed instructions on creating OAuth applications in Linear and Atlassian Developer Console.
 
-4. Build the CLI
+4. **Complete OAuth Authentication** (Required for Docker deployment)
+
+   After starting the Docker containers, you must complete the OAuth flows to store authentication tokens:
+
+   ```bash
+   # Start the Docker containers
+   docker-compose up -d
+
+   # Complete Linear OAuth (do this FIRST)
+   # Navigate to: http://localhost:3000/auth
+   # Follow the Linear authorization flow
+
+   # Complete Confluence OAuth (do this SECOND)
+   # Navigate to: http://localhost:3000/auth/confluence?organizationId=YOUR_ORG_ID
+   # Follow the Confluence authorization flow
+   ```
+
+   **⚠️ CRITICAL**: The Confluence OAuth URL **must include the organizationId parameter** that was created during the Linear OAuth flow. You can find your organization ID by checking the database:
+
+   ```bash
+   docker-compose exec db psql -U postgres -d linear_agent -c "SELECT organization_id FROM linear_tokens;"
+   ```
+
+   **OAuth Flow Order**:
+   1. ✅ **Linear OAuth first** - Creates organization record and enables @saafepulse agent
+   2. ✅ **Confluence OAuth second** - References the organization record
+   3. ✅ **Verify tokens stored** - Check database for both token types
+
+   **Agent Capabilities After OAuth**:
+   - ✅ **@saafepulse mentions in Linear** - Fully functional agent with command parsing
+   - ✅ **Slack notifications** - Operational intelligence and planning updates
+   - ✅ **Webhook processing** - Automated responses to Linear events
+
+5. Build the CLI
    ```bash
    npm run cli:build
    ```
@@ -343,10 +376,18 @@ LINEAR_REDIRECT_URI=http://localhost:3000/auth/callback
 LINEAR_ORGANIZATION_ID=wordstofilmby
 LINEAR_TEAM_ID=LIN
 
-# Confluence Configuration
+# Confluence OAuth Configuration (Required for Docker)
+CONFLUENCE_CLIENT_ID=your_confluence_client_id
+CONFLUENCE_CLIENT_SECRET=your_confluence_client_secret
+
+# Confluence Basic Auth (Legacy - for CLI outside Docker)
 CONFLUENCE_USERNAME=your_email@domain.com
 CONFLUENCE_API_TOKEN=your_api_token
 CONFLUENCE_BASE_URL=https://your-domain.atlassian.net/wiki
+
+# Application Configuration (Required for OAuth)
+APP_URL=http://localhost:3000
+SESSION_SECRET=your_32_character_random_string
 
 # Webhook Configuration
 WEBHOOK_SECRET=your_webhook_secret
@@ -369,6 +410,44 @@ docker-compose logs -f db
 
 # Debug inside container
 docker-compose exec app bash
+```
+
+### OAuth Troubleshooting
+
+#### Common OAuth Issues
+
+**Problem**: Confluence OAuth fails with "organization_id = undefined"
+**Solution**: Ensure you complete Linear OAuth FIRST, then use the correct Confluence OAuth URL:
+```bash
+# 1. Get organization ID from database
+docker-compose exec db psql -U postgres -d linear_agent -c "SELECT organization_id FROM linear_tokens;"
+
+# 2. Use the organization ID in Confluence OAuth URL
+# Navigate to: http://localhost:3000/auth/confluence?organizationId=YOUR_ORG_ID
+```
+
+**Problem**: "Failed to complete OAuth flow" error
+**Solution**: Check application logs for specific errors:
+```bash
+docker-compose logs app --tail=20
+```
+
+**Problem**: Database connection errors during OAuth
+**Solution**: Ensure containers are running and database is accessible:
+```bash
+docker-compose ps
+docker-compose exec db psql -U postgres -d linear_agent -c "SELECT 1;"
+```
+
+#### Verify OAuth Success
+
+Check that both token types are stored in the database:
+```bash
+# Check Linear tokens
+docker-compose exec db psql -U postgres -d linear_agent -c "SELECT organization_id, created_at FROM linear_tokens;"
+
+# Check Confluence tokens
+docker-compose exec db psql -U postgres -d linear_agent -c "SELECT organization_id, site_url, created_at FROM confluence_tokens;"
 ```
 
 ### Docker Management
