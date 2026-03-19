@@ -36,10 +36,10 @@ Get current commit SHA:
 !{docker inspect {PROJECT_NAME}-app 2>/dev/null | grep 'org.opencontainers.image.revision' | cut -d'"' -f4 || echo "No revision found"}
 ```
 
-Get latest commit from main branch:
+Get latest commit from dev branch:
 
 ```bash
-!{git log origin/main -1 --format='%h %s'}
+!{git log origin/dev -1 --format='%h %s'}
 ```
 
 ### 2. Trigger Build (Conditional)
@@ -47,7 +47,7 @@ Get latest commit from main branch:
 If --rebuild flag is present:
 
 ```bash
-gh workflow run "Build and Push Docker Image" --ref main
+gh workflow run "Build and Push Docker Image" --ref dev
 ```
 
 Wait for workflow to complete (poll every 30 seconds).

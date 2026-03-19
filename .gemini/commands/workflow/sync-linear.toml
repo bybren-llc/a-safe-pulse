@@ -19,11 +19,11 @@ Fetch ticket details from Linear web UI or CLI.
 
 ### 2. Analyze Work Done
 
-Check commits since main:
+Check commits since dev:
 
 ```bash
-!{git log origin/main..HEAD --oneline}
-!{git diff origin/main --stat}
+!{git log origin/dev..HEAD --oneline}
+!{git diff origin/dev --stat}
 ```
 
 Analyze:

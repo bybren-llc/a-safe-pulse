@@ -17,7 +17,7 @@ Perform a quick workflow health check against CONTRIBUTING.md requirements.
 Verify:
 - Current branch follows `{TICKET_PREFIX}-{number}-{description}` format
 - No uncommitted changes (or document what's uncommitted)
-- Branch relationship to origin/main
+- Branch relationship to origin/dev
 
 ### 2. Linear Ticket Connection
 
@@ -36,10 +36,10 @@ Verify:
 
 ### 3. Commit History
 
-Review commits since main:
+Review commits since dev:
 
 ```bash
-!{git log origin/main..HEAD --oneline}
+!{git log origin/dev..HEAD --oneline}
 ```
 
 Verify:
@@ -53,11 +53,11 @@ Check if branch needs rebasing:
 
 ```bash
 !{git fetch origin}
-!{git log HEAD..origin/main --oneline}
+!{git log HEAD..origin/dev --oneline}
 ```
 
 Report:
-- How many commits behind main
+- How many commits behind dev
 - Whether rebase is needed
 
 ### 5. Documentation Status

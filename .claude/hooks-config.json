@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "BRANCH=$(git branch --show-current 2>/dev/null); if [ \"$BRANCH\" = 'main' ]; then echo '⚠️ REMINDER: Create a feature branch before making changes.'; fi",
+            "command": "BRANCH=$(git branch --show-current 2>/dev/null); if [ \"$BRANCH\" = 'dev' ]; then echo '⚠️ REMINDER: Create a feature branch before making changes.'; fi",
             "description": "Remind to use feature branches"
           }
         ]
@@ -28,8 +28,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "BRANCH=$(git branch --show-current); if [ \"$BRANCH\" = 'main' ]; then echo '❌ BLOCKER: Cannot push directly to '$BRANCH'. Create a feature branch first: git checkout -b feature-description'; exit 1; fi",
-            "description": "Block direct push to main"
+            "command": "BRANCH=$(git branch --show-current); if [ \"$BRANCH\" = 'dev' ]; then echo '❌ BLOCKER: Cannot push directly to '$BRANCH'. Create a feature branch first: git checkout -b feature-description'; exit 1; fi",
+            "description": "Block direct push to dev"
           },
           {
             "type": "command",
@@ -38,8 +38,8 @@
           },
           {
             "type": "command",
-            "command": "git fetch origin -q && git log HEAD..origin/main --oneline | grep -q . && echo '⚠️ WARNING: Branch is behind origin/main. Consider rebasing first: git rebase origin/main' || true",
-            "description": "Warn if branch is behind main"
+            "command": "git fetch origin -q && git log HEAD..origin/dev --oneline | grep -q . && echo '⚠️ WARNING: Branch is behind origin/dev. Consider rebasing first: git rebase origin/dev' || true",
+            "description": "Warn if branch is behind dev"
           }
         ]
       },
