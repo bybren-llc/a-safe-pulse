@@ -1,0 +1,512 @@
+# Harness Manifest Schema Reference
+
+**Schema version**: 1.1
+**File**: `.harness-manifest.yml` (repo root)
+**JSON Schema**: `.harness-manifest.schema.json`
+**Scope**: Multi-domain (v2.10.0) — syncs any domain listed in `sync_scope`
+
+### What's New in v1.1
+
+- **`sync_scope`**: Array of directories to sync from upstream (default: `[".claude/"]`)
+- **Root-relative paths**: All paths in `renames`, `protected`, `replaced` are now repo-root-relative in the schema
+- **Domain tiers**: Provider (`.claude/`, `.gemini/`, `.codex/`, `.cursor/`), Shared (`.agents/`, `dark-factory/`), Release (`docs/`, `scripts/` — deferred)
+- **Backward compat**: v1.0 manifests work unchanged — paths without scope prefix are normalized by prepending `.claude/` during load
+
+## Overview
+
+The harness manifest declares how a downstream fork has customized the
+upstream SAFe Agentic Workflow harness. When the sync script
+(`scripts/sync-claude-harness.sh`) runs, it reads this manifest to:
+
+1. **Substitute** upstream `{{PLACEHOLDER}}` tokens with the fork's values
+2. **Rename** upstream file/directory paths to match the fork's structure
+3. **Protect** fork-owned files from being overwritten
+4. **Warn** when upstream changes to replaced files need manual review
+
+### Backward Compatibility
+
+If `.harness-manifest.yml` is absent, the sync script fails with an error
+(except when using `--dry-run`, which is allowed for inspection). Use
+`./scripts/sync-claude-harness.sh manifest init` to generate a manifest.
+
+---
+
+## Quick Start
+
+After running `scripts/setup-template.sh`, generate your manifest:
+
+```bash
+# Auto-generate from project state (recommended):
+./scripts/sync-claude-harness.sh init
+./scripts/sync-claude-harness.sh manifest init
+
+# Or create manually from an example:
+cp examples/manifests/rendertrust.harness-manifest.yml .harness-manifest.yml
+# Then edit identity values and customization sections
+```
+
+Validate your manifest:
+
+```bash
+# Using the sync script (recommended):
+./scripts/sync-claude-harness.sh manifest validate
+
+# Using jsonschema (Python):
+pip install check-jsonschema
+check-jsonschema --schemafile .harness-manifest.schema.json .harness-manifest.yml
+
+# Using ajv (Node.js):
+npx ajv-cli validate -s .harness-manifest.schema.json -d .harness-manifest.yml
+```
+
+---
+
+## Schema Sections
+
+### `manifest_version` (REQUIRED)
+
+```yaml
+manifest_version: "1.1"
+```
+
+Schema version string in `MAJOR.MINOR` format. The sync script uses this to
+handle older manifest formats gracefully. Bump only when the schema itself
+changes in a backward-incompatible way.
+
+| Version | Description |
+|---------|-------------|
+| `1.0`   | Initial schema (v2.7.0). `.claude/`-only scope. Paths relative to `.claude/`. |
+| `1.1`   | Multi-domain sync (v2.10.0). Adds `sync_scope`, root-relative paths. Backward compat with v1.0. |
+
+---
+
+### `identity` (REQUIRED)
+
+```yaml
+identity:
+  PROJECT_NAME: "RenderTrust"
+  PROJECT_REPO: "rendertrust"
+  PROJECT_SHORT: "REN"
+  GITHUB_ORG: "ByBren-LLC"
+  TICKET_PREFIX: "REN"
+  MAIN_BRANCH: "dev"
+  # ... all 22 setup-template.sh variables
+```
+
+Project identity values that correspond to the `{{...}}` placeholders in
+`scripts/setup-template.sh`. The sync script reads these to build the full
+substitution map.
+
+**Required fields** (minimum for a valid manifest):
+
+| Field | Description | Example |
+|-------|-------------|---------|
+| `PROJECT_NAME` | Human-readable project name | `"RenderTrust"` |
+| `PROJECT_REPO` | GitHub repository name | `"rendertrust"` |
+| `PROJECT_SHORT` | Short name or acronym | `"REN"` |
+| `GITHUB_ORG` | GitHub org or username | `"ByBren-LLC"` |
+| `TICKET_PREFIX` | Linear ticket prefix | `"REN"` |
+| `MAIN_BRANCH` | Default branch name | `"dev"` |
+
+**Optional fields** (all 22 from setup-template.sh):
+
+| Field | Description | Default |
+|-------|-------------|---------|
+| `PROJECT_DOMAIN` | Project domain | *(none)* |
+| `COMPANY_NAME` | Organization display name | *(none)* |
+| `AUTHOR_NAME` | Primary author full name | *(none)* |
+| `AUTHOR_FIRST_NAME` | Author first name | *(none)* |
+| `AUTHOR_LAST_NAME` | Author last name | *(none)* |
+| `AUTHOR_HANDLE` | Author GitHub handle | *(none)* |
+| `AUTHOR_EMAIL` | Author email | *(none)* |
+| `AUTHOR_WEBSITE` | Author website URL | *(none)* |
+| `SECURITY_EMAIL` | Security contact email | *(none)* |
+| `ARCHITECT_GITHUB_HANDLE` | Architect's GitHub handle | *(none)* |
+| `LINEAR_WORKSPACE` | Linear workspace slug | *(none)* |
+| `MCP_LINEAR_SERVER` | MCP server name for Linear | `"linear-mcp"` |
+| `MCP_CONFLUENCE_SERVER` | MCP server name for Confluence | `"confluence-mcp"` |
+| `DB_USER` | Database username | *(none)* |
+| `DB_PASSWORD` | Database password | *(none)* |
+| `DB_NAME` | Database name | *(none)* |
+| `DB_CONTAINER` | Database container name | *(none)* |
+| `DEV_CONTAINER` | Dev container name | *(none)* |
+| `STAGING_CONTAINER` | Staging container name | *(none)* |
+| `CONTAINER_REGISTRY` | Container registry URL | *(none)* |
+
+**Derived values** (computed automatically by the sync script):
+
+| Derived Variable | Computed From | Example |
+|-----------------|---------------|---------|
+| `TICKET_PREFIX_LOWER` | `lowercase(TICKET_PREFIX)` | `"ren"` |
+| `AUTHOR_INITIALS` | `AUTHOR_FIRST_NAME[0]. AUTHOR_LAST_NAME[0].` | `"S. G."` |
+| `GITHUB_REPO_URL` | `https://github.com/{GITHUB_ORG}/{PROJECT_REPO}` | `"https://github.com/ByBren-LLC/rendertrust"` |
+| `HARNESS_VERSION` | Set by sync script from release tag | `"v2.7.0"` |
+
+Derived values do not need to appear in the manifest unless you want to
+override the automatic derivation.
+
+---
+
+### `substitutions` (OPTIONAL)
+
+```yaml
+substitutions:
+  TICKET_PREFIX: "REN"
+  GITHUB_ORG: "ByBren-LLC"
+  PROJECT_NAME: "RenderTrust"
+```
+
+Explicit map of placeholder token name to the fork's resolved value. During
+sync, every occurrence of `{{TOKEN}}` in incoming upstream files is replaced
+with the corresponding value before writing to disk.
+
+**When to use `substitutions` vs `identity`:**
+
+- `identity` is the canonical source of all project values
+- `substitutions` is only needed to override or add values not derivable
+  from `identity`
+- If `sync.auto_substitute` is `true` (default), the sync script
+  automatically builds the substitution map from `identity` + derived values
+- Use `substitutions` for custom tokens not in the standard 22
+
+**Rules:**
+
+- Keys must be `UPPER_SNAKE_CASE`
+- Values are plain strings (no `{{...}}` wrapping)
+- Substitutions are applied only to files matching `sync.substitution_extensions`
+- The order of replacement follows the same "longer first" rule as
+  `setup-template.sh` to avoid partial matches
+
+---
+
+### `renames` (OPTIONAL)
+
+```yaml
+renames:
+  # File rename (repo-root-relative in v1.1+)
+  ".claude/agents/fe-developer.md": ".claude/agents/ui-engineer.md"
+
+  # Directory rename (trailing / required)
+  ".gemini/skills/stripe-patterns/": ".gemini/skills/payment-patterns/"
+```
+
+Map of upstream path to local path. In v1.1+, all paths are repo-root-relative.
+In v1.0, paths are relative to `.claude/` and normalized during load by prepending `.claude/`.
+
+**File renames:**
+
+When the sync script encounters an upstream file at the source path, it
+writes it to the target path instead.
+
+```
+Upstream: .claude/agents/fe-developer.md
+Manifest: ".claude/agents/fe-developer.md" -> ".claude/agents/ui-engineer.md"
+Result:   .claude/agents/ui-engineer.md (with substitutions applied)
+```
+
+**Directory renames:**
+
+A trailing `/` marks a directory rename. All files under the source
+directory are mapped to the target directory, preserving subdirectory
+structure.
+
+```
+Upstream: .gemini/skills/stripe-patterns/webhook-handler.md
+Manifest: ".gemini/skills/stripe-patterns/" -> ".gemini/skills/payment-patterns/"
+Result:   .gemini/skills/payment-patterns/webhook-handler.md
+```
+
+**Precedence rules:**
+
+1. Exact file renames take precedence over directory renames
+2. More specific directory renames take precedence over less specific ones
+3. If no rename matches, the file keeps its upstream path
+
+---
+
+### `protected` (OPTIONAL)
+
+```yaml
+protected:
+  - ".claude/hooks-config.json"
+  - ".claude/settings.local.json"
+  - ".codex/config.toml"
+  - ".cursor/rules/custom-*.mdc"
+```
+
+List of glob patterns (repo-root-relative in v1.1+) that the sync script must
+**never overwrite**. Protected files are completely skipped during sync.
+
+**Use cases:**
+
+- Fork-specific configuration files (`hooks-config.json`)
+- Local settings that differ per developer (`settings.local.json`)
+- Custom agents/skills not present in upstream (`agents/custom-*.md`)
+- Any file where the fork's version must always be preserved
+
+**Glob syntax:**
+
+| Pattern | Matches |
+|---------|---------|
+| `*` | Any sequence of non-separator characters |
+| `**` | Any sequence including path separators (recursive) |
+| `?` | Any single non-separator character |
+| `[abc]` | Character class |
+
+**Interaction with renames:**
+
+Protected patterns are evaluated against the **local** path (after rename
+mapping). If a file has been renamed, use the local name in `protected`.
+
+---
+
+### `replaced` (OPTIONAL)
+
+```yaml
+replaced:
+  - ".claude/agents/system-architect.md"
+  - ".claude/AGENT_OUTPUT_GUIDE.md"
+```
+
+List of paths (repo-root-relative in v1.1+) that the fork has completely
+rewritten. These files exist in both upstream and the fork, but the fork's
+version is authoritative.
+
+**Behavior during sync:**
+
+1. The file is **not** overwritten
+2. The sync script logs: `Skipped (replaced): .claude/agents/system-architect.md`
+3. If the upstream version has changed since last sync, the script emits a
+   warning: `WARNING: Upstream changed replaced file: .claude/agents/system-architect.md`
+4. The maintainer can then manually review the upstream diff and decide
+   whether to incorporate changes
+
+**`replaced` vs `protected` -- when to use which:**
+
+| Scenario | Use |
+|----------|-----|
+| File is fork-specific config (no upstream equivalent) | `protected` |
+| File exists upstream but fork maintains its own version | `replaced` |
+| File has minor customizations you want auto-merged | Neither -- let sync handle it with `conflict_strategy` |
+
+---
+
+### `sync` (OPTIONAL)
+
+```yaml
+sync:
+  sync_scope:
+    - ".claude/"
+    - ".gemini/"
+    - ".codex/"
+    - ".cursor/"
+    - ".agents/"
+    - "dark-factory/"
+  auto_substitute: true
+  backup: true
+  conflict_strategy: "prompt"
+  substitution_extensions:
+    - ".md"
+    - ".json"
+    - ".yml"
+    - ".yaml"
+    - ".sh"
+    - ".py"
+    - ".ts"
+    - ".mjs"
+    - ".txt"
+    - ".toml"
+```
+
+Tuning knobs for sync behavior. All fields have sensible defaults.
+
+#### `sync_scope` (default: `[".claude/"]`) — NEW in v1.1
+
+Array of repo-root-relative directories to sync from upstream. Only domains in this list
+are synced; all others are skipped.
+
+**Allowed domains (v2.10.0):**
+
+| Tier | Domains | Description |
+|------|---------|-------------|
+| Provider | `.claude/`, `.gemini/`, `.codex/`, `.cursor/` | IDE-specific harness configs |
+| Shared | `.agents/`, `dark-factory/` | Cross-provider shared resources |
+
+Release domains (`docs/`, `scripts/`, `patterns_library/`) are not yet supported and will
+be rejected if listed. These will be added in a future version with separate gating.
+
+**Default behavior**: If `sync_scope` is absent (v1.0 manifests), defaults to `[".claude/"]`.
+
+The sync script only syncs domains listed in `sync_scope`. Auto-detection is used only
+during `manifest init` to propose an initial scope. After the manifest is written, it
+drives all sync behavior deterministically.
+
+A manifest is required for sync. Without a manifest, sync fails (even with `--scope`),
+except for `--dry-run` which is allowed for inspection.
+
+#### `auto_substitute` (default: `true`)
+
+When `true`, the sync script automatically replaces `{{TOKEN}}` placeholders
+in incoming upstream files using values from `identity`, `substitutions`,
+and derived variables.
+
+Set to `false` if you want to sync raw upstream files and handle
+substitution separately (e.g., via a post-sync hook).
+
+#### `backup` (default: `true`)
+
+When `true`, the sync script creates a timestamped backup before each sync.
+Backups are stored at `.harness-backup/<domain>/<timestamp>/` at the repo root.
+
+The three most recent backups are retained; older ones are pruned
+automatically.
+
+#### `conflict_strategy` (default: `"prompt"`)
+
+Strategy for resolving conflicts when both upstream and local have changed a
+file since the last sync:
+
+| Strategy | Behavior |
+|----------|----------|
+| `upstream-wins` | Always take the upstream version (after substitution). Local changes are lost (recoverable from backup). |
+| `local-wins` | Always keep the local version. Logs a warning that upstream changes were skipped. |
+| `prompt` | Writes the upstream version as `<file>.upstream` alongside the local file. Maintainer resolves manually. |
+| `three-way` | Attempts a three-way merge using the last-synced version as the common ancestor. Falls back to `prompt` on conflict. |
+
+#### `substitution_extensions` (default: see above)
+
+File extensions that substitutions are applied to. Files with extensions
+**not** in this list are copied verbatim. This prevents binary file
+corruption (images, compiled files, etc.).
+
+---
+
+## Complete Example
+
+See the `examples/manifests/` directory for ready-to-use examples:
+
+- **`rendertrust.harness-manifest.yml`** -- Minimal customization (no renames,
+  REN prefix, dev branch, Python/FastAPI stack)
+- **`keryk-ai.harness-manifest.yml`** -- Heavy customization (agent renames,
+  skill directory rename, replaced files, three-way merge)
+
+---
+
+## Migration from Legacy Sync
+
+If your fork currently uses `.claude/.sync-exclude` for sync management,
+migrate to the manifest format:
+
+### Step 1: Create the manifest
+
+```bash
+cp examples/manifests/rendertrust.harness-manifest.yml .harness-manifest.yml
+```
+
+### Step 2: Fill in identity values
+
+Copy values from your `.claude/team-config.json` project section into the
+manifest's `identity` section.
+
+### Step 3: Convert .sync-exclude to protected
+
+Each line in `.claude/.sync-exclude` becomes an entry in `protected`:
+
+```yaml
+# Before (.claude/.sync-exclude):
+# hooks-config.json
+# settings.local.json
+
+# After (.harness-manifest.yml):
+protected:
+  - "hooks-config.json"
+  - "settings.local.json"
+```
+
+### Step 4: Identify replaced files
+
+Any file you have heavily customized that also exists upstream should go in
+`replaced`. A good heuristic: if `diff .claude/<file> upstream/.claude/<file>`
+shows more than 50% of lines changed, it is a replaced file.
+
+### Step 5: Validate
+
+```bash
+./scripts/sync-claude-harness.sh manifest validate
+```
+
+### Step 6: Keep .sync-exclude (transitional)
+
+The `.sync-exclude` file can remain during the transition period. When a
+manifest is present, its `protected` patterns are merged with `.sync-exclude`
+entries for backward compatibility.
+
+---
+
+## Validation
+
+### JSON Schema Validation
+
+The `.harness-manifest.schema.json` file provides a JSON Schema (2020-12)
+for validating manifest files. Use any YAML-aware JSON Schema validator:
+
+```bash
+# Using the sync script (recommended):
+./scripts/sync-claude-harness.sh manifest validate
+
+# Python (check-jsonschema):
+pip install check-jsonschema
+check-jsonschema --schemafile .harness-manifest.schema.json .harness-manifest.yml
+
+# Node.js (ajv-cli):
+npx ajv-cli validate -s .harness-manifest.schema.json -d .harness-manifest.yml
+
+# VS Code / IDE
+# Add to .vscode/settings.json:
+# "yaml.schemas": {
+#   ".harness-manifest.schema.json": ".harness-manifest.yml"
+# }
+```
+
+### Sync Script Validation
+
+The sync script performs runtime validation beyond what JSON Schema catches:
+
+- Rename targets do not collide (two sources mapping to the same target)
+- Protected patterns do not overlap with replaced paths
+- Identity values that are required for substitution are present
+- Paths do not escape allowed sync domains (no `../` traversal — enforced at runtime by preflight check)
+
+---
+
+## Design Decisions
+
+### Why YAML over JSON?
+
+- Human readability: manifests are edited by hand, not generated
+- Comments: YAML supports inline comments for documentation
+- Consistency: most CI/CD and DevOps tooling uses YAML
+
+### Why a separate manifest file vs extending `.harness-sync.json`?
+
+- Separation of concerns: the manifest declares **what** the fork customized;
+  `.harness-sync.json` (at repo root) tracks **when** the last sync happened
+- The manifest is committed to the repository; sync metadata is ephemeral
+- Different lifecycle: manifest changes rarely; sync metadata changes on
+  every sync
+
+### Why `identity` separate from `substitutions`?
+
+- `identity` is the canonical, structured source of project values
+- `substitutions` is a flat override map for edge cases
+- The sync script computes derived values from `identity` automatically
+- Keeping them separate avoids redundancy: identity is always present,
+  substitutions are only needed for overrides
+
+### Why root-relative paths in v1.1?
+
+- v1.0 used `.claude/`-relative paths because scope was `.claude/` only
+- v1.1 introduces multi-domain sync (`sync_scope`), so paths need a consistent root
+- Root-relative paths are unambiguous: `.claude/agents/bsa.md` vs `.gemini/skills/safe-workflow/SKILL.md`
+- Backward compat: v1.0 manifests have bare paths normalized by prepending `.claude/` during load
+- Path traversal (`../`) is rejected at runtime by the sync script's preflight check
