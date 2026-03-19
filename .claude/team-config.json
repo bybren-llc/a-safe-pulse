@@ -214,7 +214,7 @@
   "gates": {
     "_comment": "Blocking gates in the delivery pipeline. These correspond to the Gate Quick Reference in AGENTS.md.",
     "stop_the_line": {
-      "owner": "implementer",
+      "owner": "bsa",
       "blocking": true,
       "description": "No acceptance criteria means no work begins"
     },
@@ -229,7 +229,7 @@
       "description": "Pattern and architectural compliance check"
     },
     "stage_2_review": {
-      "owner": "architect-in-cli",
+      "owner": "system-architect",
       "blocking": true,
       "description": "Comprehensive architecture review"
     },
