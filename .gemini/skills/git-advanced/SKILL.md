@@ -11,7 +11,7 @@ Provide guidance for advanced git operations with safety considerations. This pr
 
 ## When This Skill Applies
 
-- Rebasing feature branches onto main
+- Rebasing feature branches onto dev
 - Using git bisect to find bugs
 - Cherry-picking commits between branches
 - Resolving complex merge conflicts
@@ -23,10 +23,10 @@ Provide guidance for advanced git operations with safety considerations. This pr
 
 ```bash
 # FORBIDDEN: Force push to protected branches
-git push --force origin main    # NEVER
+git push --force origin dev    # NEVER
 git push --force origin master  # NEVER
 
-# FORBIDDEN: Merge commits on main branch
+# FORBIDDEN: Merge commits on dev branch
 git merge feature-branch       # Use rebase-and-merge PR strategy
 
 # FORBIDDEN: Skip pre-commit hooks
@@ -43,10 +43,10 @@ git rebase -i HEAD~5 && git push --force  # If already pushed
 git push --force-with-lease origin ASP-XXX-feature  # Safe
 
 # SAFE: Interactive rebase before first push
-git rebase -i origin/main   # Squash/clean local commits
+git rebase -i origin/dev   # Squash/clean local commits
 
 # SAFE: Force push after conflict resolution
-git rebase origin/main && git push --force-with-lease origin ASP-XXX-feature
+git rebase origin/dev && git push --force-with-lease origin ASP-XXX-feature
 ```
 
 ## Rebase Workflow (Standard)
@@ -55,10 +55,10 @@ git rebase origin/main && git push --force-with-lease origin ASP-XXX-feature
 
 ```bash
 # 1. Fetch latest changes
-git fetch origin main
+git fetch origin dev
 
-# 2. Rebase onto latest main
-git rebase origin/main
+# 2. Rebase onto latest dev
+git rebase origin/dev
 
 # 3. If conflicts, resolve them
 git status                   # See conflicted files
@@ -77,8 +77,8 @@ git push --force-with-lease origin ASP-XXX-feature
 git add . && git commit -m "fix: address PR feedback [ASP-XXX]"
 
 # 2. Fetch and rebase again
-git fetch origin main
-git rebase origin/main
+git fetch origin dev
+git rebase origin/dev
 
 # 3. Push update
 git push --force-with-lease origin ASP-XXX-feature
@@ -201,11 +201,11 @@ git merge --continue
 
 ```bash
 # Rebase frequently to avoid large conflicts
-git fetch origin main
-git rebase origin/main  # Do this daily during long features
+git fetch origin dev
+git rebase origin/dev  # Do this daily during long features
 
 # Check for potential conflicts before rebase
-git diff origin/main...HEAD --stat
+git diff origin/dev...HEAD --stat
 ```
 
 ## Recovery Commands
@@ -275,8 +275,8 @@ git push --force-with-lease origin ASP-XXX-feature
 
 ### Pre-Push Checklist
 
-- [ ] Running `yarn ci:validate` passes
-- [ ] On correct branch (not main or master)
+- [ ] Running `npm test && npm run build` passes
+- [ ] On correct branch (not dev or master)
 - [ ] Commits have proper message format
 - [ ] No sensitive data in commits
 

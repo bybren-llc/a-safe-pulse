@@ -25,7 +25,7 @@ Since Gemini CLI doesn't have native Linear integration, use the Linear web UI o
 
 ```bash
 # Via Linear Web UI
-# Navigate to: https://linear.app/team/{{PROJECT_TEAM_NAME}}/issue/ASP-XXX
+# Navigate to: https://linear.app/team/A SAFe Pulse/issue/ASP-XXX
 
 # Or use Linear CLI if installed
 linear issue view ASP-XXX
@@ -36,7 +36,7 @@ linear issue view ASP-XXX
 ```bash
 # Via Linear Web UI: Click "New Issue" or press C
 # Or use Linear CLI:
-linear issue create --title "feat(scope): description" --team {{PROJECT_TEAM_NAME}}
+linear issue create --title "feat(scope): description" --team A SAFe Pulse
 ```
 
 ### Updating Issues
@@ -72,7 +72,7 @@ Every issue requires evidence at each phase:
 ```markdown
 **Dev Evidence**
 
-**PR**: https://github.com/{{ORG_NAME}}/{{REPO_NAME}}/pull/XXX
+**PR**: https://github.com/bybren-llc/a-safe-pulse/pull/XXX
 **Commit**: [short-hash]
 **Branch**: ASP-XXX-description
 
@@ -85,7 +85,7 @@ Every issue requires evidence at each phase:
 **Verification:**
 
 \`\`\`bash
-yarn ci:validate
+npm test && npm run build
 
 # Output: All checks passed
 
@@ -116,7 +116,7 @@ If N/A, reason: [e.g., "Dev tooling only - no user-facing changes"]
 ```markdown
 **Done Evidence**
 
-**PR Merged**: https://github.com/{{ORG_NAME}}/{{REPO_NAME}}/pull/XXX
+**PR Merged**: https://github.com/bybren-llc/a-safe-pulse/pull/XXX
 **Merge Commit**: [hash]
 
 **Final Checklist:**
