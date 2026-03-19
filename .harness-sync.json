@@ -1,0 +1,13 @@
+{
+  "upstream_repo": "bybren-llc/a-safe-pulse",
+  "upstream_branch": "main",
+  "last_synced_commit": null,
+  "last_synced_version": null,
+  "last_synced_at": null,
+  "sync_history": [],
+  "project_customizations": {
+    "ticket_prefix": "ASP-",
+    "project_name": "ASP",
+    "main_branch": "dev"
+  }
+}
