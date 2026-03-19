@@ -14,7 +14,7 @@
 # =============================================================================
 
 # Model selection -- override with `codex --model <model>`
-model = "o4-mini"
+model = "gpt-5.4"
 
 # Approval policy controls how much autonomy Codex has:
 #   "untrusted"  -- Codex cannot execute commands or write files without approval
@@ -171,19 +171,19 @@ unified_exec = true
 # -----------------------------------------------------------------------------
 
 [profiles.architect]
-model = "o4-mini"
+model = "gpt-5.4"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-read"
 approval_policy = "on-request"
 
 [profiles.developer]
-model = "o4-mini"
+model = "gpt-5.4"
 model_reasoning_effort = "medium"
 sandbox_mode = "workspace-write"
 approval_policy = "on-request"
 
 [profiles.reviewer]
-model = "o4-mini"
+model = "gpt-5.4-mini"
 model_reasoning_effort = "medium"
 sandbox_mode = "workspace-read"
 approval_policy = "untrusted"

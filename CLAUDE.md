@@ -102,7 +102,7 @@ a-safe-pulse/
 #### Authentication (`src/auth/`)
 OAuth 2.0 flows for both Linear and Confluence. Tokens are encrypted with AES-256-CBC before database storage. Key detail: **Linear OAuth must complete before Confluence OAuth** because the Confluence flow requires the `organizationId` created during the Linear flow.
 
-#### Agent System (`src/agent/`) — ~45 files
+#### Agent System (`src/agent/`) — ~44 files
 Autonomous agent that responds to Linear events. The `@saafepulse` mention in Linear triggers command parsing and execution.
 - **Behavior registry** (`behavior-registry.ts`) — Global registry for enabled behaviors, initialized on startup if `LINEAR_ACCESS_TOKEN` is set
 - **Command pipeline**: `command-parser.ts` → `parameter-extractor.ts` → `parameter-validator.ts` → `parameter-translator.ts` → `cli-executor.ts`
@@ -112,7 +112,7 @@ Autonomous agent that responds to Linear events. The `@saafepulse` mention in Li
 #### Webhook System (`src/webhooks/`)
 Processes Linear webhook events. Verification uses HMAC-SHA256 with timestamp validation (5-minute window, timing-safe comparison). Event types: `AppUserNotification`, `Issue`, `Comment`, `IssueLabel`. Six specialized processors handle assignment, status changes, mentions, comment mentions, reactions, and new comments.
 
-#### SAFe Framework (`src/safe/`) — ~40 files
+#### SAFe Framework (`src/safe/`) — ~35 files
 Full SAFe implementation. Key subsystems:
 - **Hierarchy**: Epic → Feature → Story/Enabler with validation and synchronization
 - **PI Planning**: Program Increment planning with ART iteration allocation
@@ -139,7 +139,7 @@ Dual database support:
 - **PostgreSQL** (`DATABASE_URL`) — Primary storage in Docker deployment
 - **SQLite** (`SQLITE_DB_PATH`) — Local development and sync state
 
-Migrations in `src/db/migrations/` (7 files, `001`-`007`). Schema: `linear_tokens`, `confluence_tokens`, `planning_sessions`, `planning_features`, `planning_stories`, `planning_enablers`, `program_increments`, sync tables.
+Migrations in `src/db/migrations/` (6 files, `001`-`003`, `005`-`007`). Schema: `linear_tokens`, `confluence_tokens`, `planning_sessions`, `planning_features`, `planning_stories`, `planning_enablers`, `program_increments`, sync tables.
 
 #### Monitoring (`src/monitoring/`)
 Health monitoring, operational health, resource monitoring, and budget monitoring. Health endpoint at `GET /api/health`.
