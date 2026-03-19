@@ -25,7 +25,7 @@ Since Gemini CLI doesn't have native Linear integration, use the Linear web UI o
 
 ```bash
 # Via Linear Web UI
-# Navigate to: https://linear.app/team/A SAFe Pulse/issue/ASP-XXX
+# Navigate to: https://linear.app/cheddarfox/issue/ASP-XXX
 
 # Or use Linear CLI if installed
 linear issue view ASP-XXX
@@ -36,7 +36,7 @@ linear issue view ASP-XXX
 ```bash
 # Via Linear Web UI: Click "New Issue" or press C
 # Or use Linear CLI:
-linear issue create --title "feat(scope): description" --team A SAFe Pulse
+linear issue create --title "feat(scope): description" --team "A SAFe Pulse"
 ```
 
 ### Updating Issues
