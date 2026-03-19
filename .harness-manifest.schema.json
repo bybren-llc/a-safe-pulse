@@ -1,0 +1,259 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/bybren-llc/safe-agentic-workflow/blob/main/.harness-manifest.schema.json",
+  "title": "Harness Manifest",
+  "description": "Schema for .claude/.harness-manifest.yml — declares how a downstream fork customizes the SAFe Agentic Workflow harness. In v1.1+, all paths in renames/protected/replaced are repo-root-relative. In v1.0, paths are .claude/-relative and normalized during load.",
+  "type": "object",
+  "required": ["manifest_version", "identity"],
+  "additionalProperties": false,
+  "properties": {
+    "manifest_version": {
+      "type": "string",
+      "description": "Schema version for forward compatibility. Must be a semver-compatible string (e.g., '1.0').",
+      "pattern": "^[0-9]+\\.[0-9]+$",
+      "examples": ["1.0", "1.1"]
+    },
+    "identity": {
+      "type": "object",
+      "description": "Project identity values matching the {{...}} placeholder names from scripts/setup-template.sh. These are used to build the substitution map during sync.",
+      "required": [
+        "PROJECT_NAME",
+        "PROJECT_REPO",
+        "PROJECT_SHORT",
+        "GITHUB_ORG",
+        "TICKET_PREFIX",
+        "MAIN_BRANCH"
+      ],
+      "properties": {
+        "PROJECT_NAME": {
+          "type": "string",
+          "description": "Human-readable project name (e.g., 'RenderTrust').",
+          "minLength": 1
+        },
+        "PROJECT_REPO": {
+          "type": "string",
+          "description": "GitHub repository name (e.g., 'rendertrust').",
+          "pattern": "^[a-zA-Z0-9._-]+$"
+        },
+        "PROJECT_SHORT": {
+          "type": "string",
+          "description": "Short name or acronym (e.g., 'REN'). Often matches TICKET_PREFIX.",
+          "minLength": 1
+        },
+        "PROJECT_DOMAIN": {
+          "type": "string",
+          "description": "Project domain (e.g., 'rendertrust.com')."
+        },
+        "GITHUB_ORG": {
+          "type": "string",
+          "description": "GitHub organization or username (e.g., 'ByBren-LLC').",
+          "pattern": "^[a-zA-Z0-9._-]+$"
+        },
+        "COMPANY_NAME": {
+          "type": "string",
+          "description": "Display name of the company or organization (e.g., 'ByBren, LLC')."
+        },
+        "AUTHOR_NAME": {
+          "type": "string",
+          "description": "Full name of the primary author (e.g., 'J. Scott Graham')."
+        },
+        "AUTHOR_FIRST_NAME": {
+          "type": "string",
+          "description": "Author's first name (e.g., 'Scott')."
+        },
+        "AUTHOR_LAST_NAME": {
+          "type": "string",
+          "description": "Author's last name (e.g., 'Graham')."
+        },
+        "AUTHOR_HANDLE": {
+          "type": "string",
+          "description": "Author's GitHub handle (e.g., 'cheddarfox')."
+        },
+        "AUTHOR_EMAIL": {
+          "type": "string",
+          "description": "Author's email address.",
+          "format": "email"
+        },
+        "AUTHOR_WEBSITE": {
+          "type": "string",
+          "description": "Author's website URL.",
+          "format": "uri"
+        },
+        "SECURITY_EMAIL": {
+          "type": "string",
+          "description": "Security contact email address.",
+          "format": "email"
+        },
+        "ARCHITECT_GITHUB_HANDLE": {
+          "type": "string",
+          "description": "GitHub handle of the project's architect / Stage 2 reviewer."
+        },
+        "TICKET_PREFIX": {
+          "type": "string",
+          "description": "Linear ticket prefix (e.g., 'REN'). Used in branch names and commit messages.",
+          "pattern": "^[A-Z][A-Z0-9]{1,9}$"
+        },
+        "LINEAR_WORKSPACE": {
+          "type": "string",
+          "description": "Linear workspace slug (e.g., 'cheddarfox')."
+        },
+        "MAIN_BRANCH": {
+          "type": "string",
+          "description": "Name of the main/default branch (e.g., 'main' or 'dev').",
+          "default": "main"
+        },
+        "MCP_LINEAR_SERVER": {
+          "type": "string",
+          "description": "MCP server name for Linear integration.",
+          "default": "linear-mcp"
+        },
+        "MCP_CONFLUENCE_SERVER": {
+          "type": "string",
+          "description": "MCP server name for Confluence integration.",
+          "default": "confluence-mcp"
+        },
+        "DB_USER": {
+          "type": "string",
+          "description": "Database username."
+        },
+        "DB_PASSWORD": {
+          "type": "string",
+          "description": "Database password (for development/template use only)."
+        },
+        "DB_NAME": {
+          "type": "string",
+          "description": "Database name."
+        },
+        "DB_CONTAINER": {
+          "type": "string",
+          "description": "Docker container name for the database."
+        },
+        "DEV_CONTAINER": {
+          "type": "string",
+          "description": "Docker container name for development."
+        },
+        "STAGING_CONTAINER": {
+          "type": "string",
+          "description": "Docker container name for staging."
+        },
+        "CONTAINER_REGISTRY": {
+          "type": "string",
+          "description": "Container registry URL (e.g., 'ghcr.io/my-org')."
+        }
+      },
+      "additionalProperties": {
+        "type": "string",
+        "description": "Additional custom identity variables. Must be uppercase with underscores."
+      }
+    },
+    "substitutions": {
+      "type": "object",
+      "description": "Map of upstream placeholder token name to the fork's resolved value. Variable names must match those in scripts/setup-template.sh. During sync, {{TOKEN}} in upstream files is replaced with the corresponding value. Derived values (TICKET_PREFIX_LOWER, AUTHOR_INITIALS, GITHUB_REPO_URL, HARNESS_VERSION) are computed automatically unless overridden here.",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "propertyNames": {
+        "pattern": "^[A-Z][A-Z0-9_]*$"
+      },
+      "examples": [
+        {
+          "TICKET_PREFIX": "REN",
+          "GITHUB_ORG": "ByBren-LLC",
+          "PROJECT_NAME": "RenderTrust"
+        }
+      ]
+    },
+    "renames": {
+      "type": "object",
+      "description": "Map of upstream path to local path. In v1.1+, paths are repo-root-relative (e.g., '.claude/agents/fe-developer.md'). In v1.0, paths are relative to .claude/ and normalized during load. Use trailing '/' for directory renames. File renames take precedence over directory renames.",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      },
+      "propertyNames": {
+        "description": "Upstream path (repo-root-relative). Must not start with / and must not contain path traversal (..). Runtime enforcement by sync script preflight check provides additional safety.",
+        "pattern": "^[^/]"
+      },
+      "examples": [
+        {
+          ".claude/agents/fe-developer.md": ".claude/agents/ui-engineer.md",
+          ".gemini/skills/stripe-patterns/": ".gemini/skills/payment-patterns/"
+        }
+      ]
+    },
+    "protected": {
+      "type": "array",
+      "description": "Glob patterns that the sync script must NEVER overwrite. In v1.1+, patterns are repo-root-relative (e.g., '.claude/hooks-config.json'). In v1.0, patterns are relative to .claude/ and normalized during load.",
+      "items": {
+        "type": "string",
+        "description": "Glob pattern. Supports *, **, and ? wildcards.",
+        "minLength": 1
+      },
+      "uniqueItems": true,
+      "examples": [
+        [".claude/hooks-config.json", ".claude/settings.local.json", ".codex/config.toml"]
+      ]
+    },
+    "replaced": {
+      "type": "array",
+      "description": "Paths that the fork has completely rewritten. In v1.1+, paths are repo-root-relative. In v1.0, paths are relative to .claude/ and normalized during load. These are not overwritten during sync, but the script warns if upstream changed.",
+      "items": {
+        "type": "string",
+        "description": "File path (repo-root-relative in v1.1+).",
+        "minLength": 1
+      },
+      "uniqueItems": true,
+      "examples": [
+        [".claude/agents/system-architect.md", ".claude/AGENT_OUTPUT_GUIDE.md"]
+      ]
+    },
+    "sync": {
+      "type": "object",
+      "description": "Sync behavior preferences. All fields have sensible defaults.",
+      "additionalProperties": false,
+      "properties": {
+        "sync_scope": {
+          "type": "array",
+          "description": "Repo-root-relative directories to sync from upstream. Added in v1.1. Defaults to [\".claude/\"] for v1.0 backward compatibility. Allowed domains: provider (.claude/, .gemini/, .codex/, .cursor/), shared (.agents/, dark-factory/). Release domains (docs/, scripts/, patterns_library/) are not yet supported and will be rejected.",
+          "items": {
+            "type": "string",
+            "enum": [".claude/", ".gemini/", ".codex/", ".cursor/", ".agents/", "dark-factory/"],
+            "description": "Sync domain directory (must be from the allowed domain list)."
+          },
+          "uniqueItems": true,
+          "default": [".claude/"],
+          "minItems": 1
+        },
+        "auto_substitute": {
+          "type": "boolean",
+          "description": "Automatically apply substitutions from identity/substitutions to incoming upstream files during sync.",
+          "default": true
+        },
+        "backup": {
+          "type": "boolean",
+          "description": "Create a timestamped backup before each sync. Current: .claude/.harness-backup/. Planned (SAW-34): .harness-backup/ at repo root.",
+          "default": true
+        },
+        "conflict_strategy": {
+          "type": "string",
+          "description": "Strategy for resolving conflicts when both upstream and local have changed a file since last sync.",
+          "enum": ["upstream-wins", "local-wins", "prompt", "three-way"],
+          "default": "prompt"
+        },
+        "substitution_extensions": {
+          "type": "array",
+          "description": "File extensions that substitutions are applied to. Non-matching files are copied verbatim (binary safety).",
+          "items": {
+            "type": "string",
+            "pattern": "^\\.[a-zA-Z0-9]+$"
+          },
+          "uniqueItems": true,
+          "default": [
+            ".md", ".json", ".yml", ".yaml", ".sh",
+            ".py", ".ts", ".mjs", ".txt", ".toml"
+          ]
+        }
+      }
+    }
+  }
+}
