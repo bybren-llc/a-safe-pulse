@@ -53,22 +53,22 @@ Fetch and rebase:
 
 ```bash
 !{git fetch origin}
-!{git log HEAD..origin/main --oneline}
+!{git log HEAD..origin/dev --oneline}
 ```
 
 If commits exist upstream, run:
 ```bash
-git rebase origin/main
+git rebase origin/dev
 ```
 
-**BLOCKER**: Must be up-to-date with main branch.
+**BLOCKER**: Must be up-to-date with dev branch.
 
 ### 5. Commit Message Validation
 
 Check all commits follow SAFe format:
 
 ```bash
-!{git log origin/main..HEAD --oneline}
+!{git log origin/dev..HEAD --oneline}
 ```
 
 **Required format**: `type(scope): description [{TICKET_PREFIX}-XXX]`

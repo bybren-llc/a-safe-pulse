@@ -3,13 +3,13 @@ description = "Full local development sync after git pull"
 prompt = """
 # Local Sync Command
 
-Perform complete local development environment sync after pulling from main branch. This ensures dependencies, database, and validation are all up-to-date.
+Perform complete local development environment sync after pulling from dev branch. This ensures dependencies, database, and validation are all up-to-date.
 
 ## Workflow
 
 ### 1. Git Branch Cleanup (Best Practice)
 
-Check current branch and switch to main if needed:
+Check current branch and switch to dev if needed:
 
 ```bash
 !{git branch --show-current}
@@ -17,15 +17,15 @@ Check current branch and switch to main if needed:
 
 If on feature branch:
 - Check for uncommitted changes
-- If clean, switch to main: `git checkout main`
-- If dirty, offer to stash: `git stash && git checkout main`
+- If clean, switch to dev: `git checkout dev`
+- If dirty, offer to stash: `git stash && git checkout dev`
 
 ### 2. Git Pull
 
-Pull latest changes from origin/main:
+Pull latest changes from origin/dev:
 
 ```bash
-!{git pull origin main}
+!{git pull origin dev}
 ```
 
 If pull fails due to uncommitted changes:
@@ -35,10 +35,10 @@ If pull fails due to uncommitted changes:
 
 ### 3. Branch Cleanup (Git Best Practice)
 
-After pulling latest main, clean up merged branches:
+After pulling latest dev, clean up merged branches:
 
 ```bash
-!{git branch --merged main | grep -v "^\\*" | grep -v "main" | grep -v "master"}
+!{git branch --merged dev | grep -v "^\\*" | grep -v "dev" | grep -v "master"}
 ```
 
 Offer to delete merged feature branches.

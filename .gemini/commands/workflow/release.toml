@@ -51,7 +51,7 @@ Then bump the minor version (or ask the user for major/minor/patch).
 
 ## Phase 5: Branch Sync
 
-- Sync all long-lived branches (e.g., main ↔ template, main ↔ dev)
+- Sync all long-lived branches (e.g., dev ↔ template)
 - Verify all tags pushed to remote
 
 ## Phase 6: Cleanup

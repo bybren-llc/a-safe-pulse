@@ -229,9 +229,9 @@
       "description": "Pattern and architectural compliance check"
     },
     "stage_2_review": {
-      "owner": "system-architect",
+      "owner": "cheddarfox",
       "blocking": true,
-      "description": "Comprehensive architecture review"
+      "description": "Human architect comprehensive review in CLI"
     },
     "hitl_merge": {
       "owner": "cheddarfox",

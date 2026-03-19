@@ -60,7 +60,7 @@ Run essential checks only:
 ### 4. Quick PR
 
 ```bash
-git fetch origin && git rebase origin/main
+git fetch origin && git rebase origin/dev
 git push --force-with-lease origin {branch}
 ```
 

@@ -12,7 +12,7 @@ Review current work and identify documentation that needs updating per CONTRIBUT
 Analyze git diff to understand scope:
 
 ```bash
-!{git diff origin/main --name-only}
+!{git diff origin/dev --name-only}
 ```
 
 Categorize changes:

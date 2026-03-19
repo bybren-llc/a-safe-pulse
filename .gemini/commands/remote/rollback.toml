@@ -36,7 +36,7 @@ ssh -i {SSH_KEY_PATH} {REMOTE_USER}@{REMOTE_HOST} "docker images {REGISTRY}/{IMA
 Cross-reference with git commits to show messages:
 
 ```bash
-!{git log origin/main -10 --oneline}
+!{git log origin/dev -10 --oneline}
 ```
 
 ### 3. Select Rollback Target

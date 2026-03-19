@@ -30,10 +30,10 @@ ssh -i {SSH_KEY_PATH} {REMOTE_USER}@{REMOTE_HOST} "docker inspect {CONTAINER_NAM
 
 ### 2. Get Latest Registry Image Info
 
-Check latest commit on your main branch:
+Check latest commit on your dev branch:
 
 ```bash
-!{git fetch origin main && git log origin/main -1 --format='%H %s'}
+!{git fetch origin dev && git log origin/dev -1 --format='%H %s'}
 ```
 
 Check latest GitHub Actions build status:
