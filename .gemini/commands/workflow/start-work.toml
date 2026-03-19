@@ -30,7 +30,7 @@ You are starting work on a new Linear ticket.
    - Use lowercase with hyphens
 
 4. **Start from Latest Main**
-   - Ensure starting from clean main branch: `git checkout main && git pull origin main`
+   - Ensure starting from clean dev branch: `git checkout dev && git pull origin dev`
    - Verify no uncommitted changes
 
 5. **Create Feature Branch**
@@ -51,7 +51,7 @@ You are starting work on a new Linear ticket.
 
 - Linear ticket verified
 - AC/DoD confirmed (Stop-the-Line gate passed)
-- On latest main branch
+- On latest dev branch
 - Feature branch created with correct naming
 - Ready to begin work
 

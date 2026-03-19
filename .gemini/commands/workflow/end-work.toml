@@ -13,7 +13,7 @@ Verify current state:
 
 ```bash
 !{git status}
-!{git log origin/main..HEAD --oneline}
+!{git log origin/dev..HEAD --oneline}
 ```
 
 Status options:

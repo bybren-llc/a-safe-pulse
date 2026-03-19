@@ -1,10 +1,10 @@
-# a-safe-pulse-app CI/CD Pipeline Guide
+# a-safe-pulse CI/CD Pipeline Guide
 
 _Automated multi-team collaboration with enforced rebase-first workflow_
 
 ## 🎯 Overview
 
-This CI/CD pipeline solves multi-team collaboration challenges by automating the rebase-first workflow, enforcing code quality standards, and preventing conflicts before they reach the `{{PRIMARY_DEV_BRANCH}}` branch.
+This CI/CD pipeline solves multi-team collaboration challenges by automating the rebase-first workflow, enforcing code quality standards, and preventing conflicts before they reach the `dev` branch.
 
 ## 🏗️ Pipeline Architecture
 
@@ -23,7 +23,7 @@ This CI/CD pipeline solves multi-team collaboration challenges by automating the
 
 ### Stage 1: Structure Validation 🔍
 
-**Triggers**: PR opened/updated to `{{PRIMARY_DEV_BRANCH}}`
+**Triggers**: PR opened/updated to `dev`
 
 **Validates**:
 
@@ -41,14 +41,14 @@ This CI/CD pipeline solves multi-team collaboration challenges by automating the
 
 **Checks**:
 
-- Branch is up-to-date with `{{PRIMARY_DEV_BRANCH}}`
-- No commits behind `{{PRIMARY_DEV_BRANCH}}` branch
+- Branch is up-to-date with `dev`
+- No commits behind `dev` branch
 - Linear history maintained
 
 **Auto-Actions**:
 
 - Comments on PR with rebase instructions
-- Shows recent commits on `{{PRIMARY_DEV_BRANCH}}`
+- Shows recent commits on `dev`
 - Blocks merge until rebased
 
 ### Stage 3: Comprehensive Testing 🧪
@@ -124,7 +124,7 @@ This CI/CD pipeline solves multi-team collaboration challenges by automating the
 
 **Production Safety**:
 
-- Smoke tests on `{{PRIMARY_DEV_BRANCH}}` branch
+- Smoke tests on `dev` branch
 - Integration verification
 - Team notifications on failure
 - Linear ticket updates
@@ -133,7 +133,7 @@ This CI/CD pipeline solves multi-team collaboration challenges by automating the
 
 ### Required Status Checks
 
-All PRs to `{{PRIMARY_DEV_BRANCH}}` must pass:
+All PRs to `dev` must pass:
 
 - ✅ Structure validation
 - ✅ Rebase status check
@@ -150,7 +150,7 @@ All PRs to `{{PRIMARY_DEV_BRANCH}}` must pass:
 
 ### Protection Features
 
-- **No force pushes** to `{{PRIMARY_DEV_BRANCH}}`
+- **No force pushes** to `dev`
 - **No deletions** allowed
 - **Admin enforcement** included
 - **Up-to-date branches** required

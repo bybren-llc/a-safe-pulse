@@ -30,7 +30,7 @@ mcp__linear-mcp__get_issue({ id: "ASP-459" })
 
 # List issues with filters
 mcp__linear-mcp__list_issues({
-  team: "{{PROJECT_TEAM_NAME}}",
+  team: "A SAFe Pulse",
   state: "In Progress",
   assignee: "me",
 })
@@ -41,7 +41,7 @@ mcp__linear-mcp__list_issues({
 ```text
 mcp__linear-mcp__create_issue({
   title: "feat(scope): description",
-  team: "{{PROJECT_TEAM_NAME}}",
+  team: "A SAFe Pulse",
   description: "## Summary\n\n...",
   labels: ["feature", "sprint-1"],
   parentId: "parent-uuid",  // Optional - for sub-issues
@@ -83,7 +83,7 @@ Every issue requires evidence at each phase:
 ```markdown
 **Dev Evidence**
 
-**PR**: https://github.com/{{ORG_NAME}}/{{REPO_NAME}}/pull/XXX
+**PR**: https://github.com/bybren-llc/a-safe-pulse/pull/XXX
 **Commit**: [short-hash]
 **Branch**: ASP-XXX-description
 
@@ -96,7 +96,7 @@ Every issue requires evidence at each phase:
 **Verification:**
 
 \`\`\`bash
-yarn ci:validate
+npm test && npm run build
 
 # Output: All checks passed
 
@@ -127,7 +127,7 @@ If N/A, reason: [e.g., "Dev tooling only - no user-facing changes"]
 ```markdown
 **Done Evidence**
 
-**PR Merged**: https://github.com/{{ORG_NAME}}/{{REPO_NAME}}/pull/XXX
+**PR Merged**: https://github.com/bybren-llc/a-safe-pulse/pull/XXX
 **Merge Commit**: [hash]
 
 **Final Checklist:**
@@ -211,7 +211,7 @@ PRs are automatically linked when:
 ```text
 mcp__linear-mcp__create_issue({
   title: "Sub-task description",
-  team: "{{PROJECT_TEAM_NAME}}",
+  team: "A SAFe Pulse",
   parentId: "parent-issue-uuid",
 })
 ```
@@ -221,7 +221,7 @@ mcp__linear-mcp__create_issue({
 ```text
 mcp__linear-mcp__list_issues({
   label: "sprint-1",
-  team: "{{PROJECT_TEAM_NAME}}",
+  team: "A SAFe Pulse",
 })
 ```
 
