@@ -81,7 +81,7 @@ and maintain linear git history through rebase-first workflow.
 
 ```bash
 # Pre-PR validation (MANDATORY)
-yarn ci:validate && echo "RTE SUCCESS" || echo "RTE FAILED"
+npm test && npm run build && echo "RTE SUCCESS" || echo "RTE FAILED"
 
 # Git compliance check
 git log --oneline -10 | grep -E "ASP-[0-9]+" && echo "COMMIT FORMAT SUCCESS"
@@ -199,12 +199,12 @@ git rebase origin/dev
 # Resolve any conflicts if needed
 
 # 4. Run CI validation locally (CRITICAL)
-yarn ci:validate
+npm test && npm run build
 # This runs:
-# - yarn type-check
-# - yarn lint
-# - yarn test:unit
-# - yarn format:check
+# - npx tsc --noEmit
+# - npx tsc --noEmit
+# - npm test
+# - npm run build
 ```
 
 #### Validation Checklist
@@ -221,11 +221,11 @@ yarn ci:validate
 
 ### CI/CD Validation
 
-- [ ] `yarn type-check` passes ✅
-- [ ] `yarn lint` passes ✅
-- [ ] `yarn test:unit` passes ✅
-- [ ] `yarn format:check` passes ✅
-- [ ] `yarn build` succeeds ✅
+- [ ] `npx tsc --noEmit` passes ✅
+- [ ] `npx tsc --noEmit` passes ✅
+- [ ] `npm test` passes ✅
+- [ ] `npm run build` passes ✅
+- [ ] `npm run build` succeeds ✅
 
 ### Evidence Collection
 
@@ -274,7 +274,7 @@ Implements [feature/fix] as specified in Linear ticket ASP-XXX.
 
 ### Validation Results
 \`\`\`bash
-yarn ci:validate
+npm test && npm run build
 # [Output]
 \`\`\`
 
@@ -496,7 +496,7 @@ git log --oneline -5 | grep "ASP-XXX"
 ### Pre-Merge Validation
 
 \`\`\`bash
-yarn ci:validate
+npm test && npm run build
 
 # All checks passed ✅
 
@@ -541,7 +541,7 @@ gh pr checks
 
 ```bash
 # 1. Validate locally
-yarn ci:validate
+npm test && npm run build
 
 # 2. Rebase and push
 git fetch origin && git rebase origin/dev
@@ -561,26 +561,21 @@ gh pr checks
 ### Pattern 2: Hotfix Release
 
 ```bash
-# 1. Create hotfix branch from main
-git checkout main
-git pull origin main
+# 1. Create hotfix branch from dev
+git checkout dev
+git pull origin dev
 git checkout -b ASP-999-hotfix-critical-bug
 
 # 2. Fix and validate
 # ... make changes ...
-yarn ci:validate
+npm test && npm run build
 
-# 3. PR to main (emergency)
-gh pr create --base main --title "fix(critical): resolve security issue [ASP-999]"
+# 3. PR to dev (emergency)
+gh pr create --base dev --title "fix(critical): resolve security issue [ASP-999]"
 
 # 4. Handoff to HITL for emergency merge
 # Notify Scott Graham: "Emergency PR ready - blocks production"
 # RTE work ends here - Scott handles merge via GitHub
-
-# 5. After HITL merges main, backport to dev (RTE coordinates)
-git checkout dev
-git cherry-pick <hotfix-commit-sha>
-git push origin dev
 ```
 
 ### Pattern 3: Multi-Agent Coordination
