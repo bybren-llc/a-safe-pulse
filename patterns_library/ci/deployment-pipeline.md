@@ -163,8 +163,8 @@ jobs:
 
       - name: Run smoke tests
         run: {{SMOKE_TEST_COMMAND}}
-        # e.g., npx playwright test --config=playwright.smoke.config.ts
-        # e.g., pytest tests/smoke/ --base-url=$STAGING_URL
+        # e.g., npx jest tests/smoke/
+        # e.g., npx jest tests/smoke/ 2>&1
         env:
           BASE_URL: ${{ vars.STAGING_URL }}
 
@@ -272,7 +272,7 @@ async function healthCheck() {
   // Check database connectivity
   try {
     const start = Date.now();
-    await {{DATABASE_HEALTH_QUERY}};  // e.g., prisma.$queryRaw`SELECT 1`
+    await {{DATABASE_HEALTH_QUERY}};  // e.g., pool.query('SELECT 1')
     checks.checks.database = {
       status: 'healthy',
       latencyMs: Date.now() - start,

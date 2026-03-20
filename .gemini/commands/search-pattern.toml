@@ -10,7 +10,7 @@ Search codebase for patterns using optimized tools. Useful for refactoring, find
 ## Usage
 
 ```bash
-/search-pattern "prisma\\." ts     # Find direct Prisma usage in TypeScript
+/search-pattern "pool\\.query" ts   # Find direct database queries in TypeScript
 /search-pattern "withUserContext" # Find RLS context usage
 /search-pattern "import.*icons"   # Find icon imports
 ```
@@ -50,9 +50,9 @@ Group by:
 
 ### Find Direct Database Access
 ```bash
-/search-pattern "prisma\\.(user|payment|subscription)"
+/search-pattern "pool\\.query|client\\.query"
 ```
-Identifies: Direct Prisma calls that should use RLS context helpers
+Identifies: Direct database calls that should use RLS context helpers
 
 ### Find Icon Library Usage
 ```bash

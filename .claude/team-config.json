@@ -92,7 +92,7 @@
       "category": "quality",
       "description": "Execute testing strategy, validate ACs, iteration authority",
       "collapsible": false,
-      "primary_tools": ["playwright", "jest", "linear"],
+      "primary_tools": ["jest", "linear"],
       "exit_state": "Approved for RTE",
       "gate_owner": true
     },

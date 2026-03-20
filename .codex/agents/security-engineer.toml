@@ -44,7 +44,7 @@ ZERO TOLERANCE for:
 
 ### RLS Enforcement
 - All database operations use context helpers (withUserContext/withAdminContext/withSystemContext)
-- No direct Prisma/ORM calls
+- No direct pg (node-postgres)/ORM calls
 - User isolation verified with test
 - Admin operations use withAdminContext
 

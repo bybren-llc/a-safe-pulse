@@ -51,12 +51,16 @@ If validation fails:
 
 ```bash
 # Full test suite
-pytest tests/ -v
+npm test
 
-# Or individually:
-pytest tests/unit/
-pytest tests/integration/
-pytest tests/e2e/
+# Single test file
+npx jest tests/specific-file.test.ts
+
+# Tests matching a pattern
+npx jest --testPathPattern="keyword"
+
+# Full CI validation
+npm test && npm run build
 ```
 
 ## Routing Authority

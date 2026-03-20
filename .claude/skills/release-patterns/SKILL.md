@@ -17,7 +17,7 @@ Ensure consistent PR creation, CI/CD validation, and release coordination follow
 Invoke this skill when:
 
 - Creating pull requests
-- Running pre-PR validation (`yarn ci:validate`)
+- Running pre-PR validation (`npm test && npm run build`)
 - Checking CI/CD status
 - Coordinating merge timing
 - Verifying rebase status
@@ -35,7 +35,7 @@ gh pr merge --squash  # Breaks linear history
 gh pr merge --merge   # Creates merge commit
 
 # FORBIDDEN: Skipping CI validation
-git push origin feature  # Without yarn ci:validate first
+git push origin feature  # Without npm test && npm run build first
 
 # FORBIDDEN: Pushing without rebase
 git push origin feature  # When branch is behind dev
@@ -51,7 +51,7 @@ gh pr create --title "feat(scope): description [ASP-XXX]"
 gh pr merge --rebase --delete-branch
 
 # CORRECT: CI validation before push
-yarn ci:validate && git push --force-with-lease
+npm test && npm run build && git push --force-with-lease
 
 # CORRECT: Always rebase first
 git fetch origin && git rebase origin/dev
@@ -65,14 +65,14 @@ Before creating any PR:
 - [ ] Branch name: `ASP-{number}-{description}`
 - [ ] Commits follow: `type(scope): description [ASP-XXX]`
 - [ ] Rebased on latest dev: `git fetch origin && git rebase origin/dev`
-- [ ] CI passes locally: `yarn ci:validate`
+- [ ] CI passes locally: `npm test && npm run build`
 - [ ] Linear history: No merge commits (`git log --oneline --graph -10`)
 
 ## CI/CD Validation Command
 
 ```bash
 # MANDATORY before any PR
-yarn ci:validate && echo "READY FOR PR" || echo "FIX ISSUES FIRST"
+npm test && npm run build && echo "READY FOR PR" || echo "FIX ISSUES FIRST"
 ```
 
 ## PR Creation Template
@@ -93,7 +93,7 @@ Implements [feature/fix] as specified in Linear ticket ASP-XXX.
 ## Testing
 
 ```bash
-yarn ci:validate
+npm test && npm run build
 # All checks passed
 ````
 

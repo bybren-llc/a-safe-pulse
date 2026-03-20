@@ -51,10 +51,10 @@ jobs:
         uses: {{RUNTIME_SETUP_ACTION}}  # e.g., actions/setup-node@v4
         with:
           {{RUNTIME_VERSION_KEY}}: ${{ env.{{RUNTIME_VERSION_VAR}} }}
-          cache: '{{PACKAGE_MANAGER}}'  # e.g., 'yarn', 'npm', 'pip', 'go'
+          cache: '{{PACKAGE_MANAGER}}'  # e.g., 'npm', 'pip', 'go'
 
       - name: Install dependencies
-        run: {{INSTALL_COMMAND}}  # e.g., yarn install --frozen-lockfile
+        run: {{INSTALL_COMMAND}}  # e.g., npm ci
 
       - name: Run linter
         run: {{LINT_COMMAND}}
@@ -226,8 +226,8 @@ jobs:
           name: build-output
           path: {{BUILD_OUTPUT_DIR}}/
 
-      - name: Install E2E test browsers
-        run: {{E2E_INSTALL_COMMAND}}  # e.g., npx playwright install --with-deps chromium
+      - name: Install E2E test dependencies
+        run: {{E2E_INSTALL_COMMAND}}  # e.g., npx cypress install
 
       - name: Run E2E tests
         run: {{TEST_E2E_COMMAND}}
@@ -291,8 +291,8 @@ jobs:
    - `dev` - your primary branch (e.g., `main`, `master`, `develop`)
    - `{{RUNTIME_SETUP_ACTION}}` - setup action for your language (e.g., `actions/setup-node@v4`, `actions/setup-python@v5`, `actions/setup-go@v5`)
    - `{{RUNTIME_VERSION_KEY}}` - version key (e.g., `node-version`, `python-version`, `go-version`)
-   - `{{PACKAGE_MANAGER}}` - package manager for caching (e.g., `yarn`, `npm`, `pip`)
-   - `{{INSTALL_COMMAND}}` - dependency install (e.g., `yarn install --frozen-lockfile`)
+   - `{{PACKAGE_MANAGER}}` - package manager for caching (e.g., `npm`, `pip`)
+   - `{{INSTALL_COMMAND}}` - dependency install (e.g., `npm ci`)
    - All `{{*_COMMAND}}` placeholders - map to your actual scripts
 
 2. **Adjust the matrix strategy** to test the runtime versions you support. Remove matrix testing if you only target a single version.
@@ -337,7 +337,7 @@ jobs:
 - [Secrets Management](../security/secrets-management.md) - Configure CI secrets securely
 - [Environment Config](../config/environment-config.md) - Environment variables for CI
 - [API Integration Test](../testing/api-integration-test.md) - Tests that run in the integration stage
-- [E2E User Flow](../testing/e2e-user-flow.md) - Tests that run in the E2E stage
+- E2E User Flow (archived to `docs/archive/harness-upstream/patterns-testing/`) - Not applicable to this project
 
 ---
 

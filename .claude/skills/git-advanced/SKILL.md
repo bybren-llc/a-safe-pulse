@@ -107,7 +107,7 @@ git bisect good <commit-sha>
 # e.g., git bisect good abc1234
 
 # 4. Git checks out middle commit - test it
-yarn test:unit  # or manual test
+npm test  # or manual test
 
 # 5. Tell git if this commit is good or bad
 git bisect good  # or
@@ -125,7 +125,7 @@ git bisect reset
 ```bash
 # Run a test script automatically
 git bisect start HEAD abc1234
-git bisect run yarn test:specific-test
+git bisect run npm test -- --testPathPattern="specific-test"
 ```
 
 ## Cherry-Pick (Selective Commits)
@@ -278,7 +278,7 @@ git push --force-with-lease origin ASP-XXX-feature
 
 ### Pre-Push Checklist
 
-- [ ] Running `yarn ci:validate` passes
+- [ ] Running `npm test && npm run build` passes
 - [ ] On correct branch (not dev or master)
 - [ ] Commits have proper message format
 - [ ] No sensitive data in commits

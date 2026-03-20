@@ -136,7 +136,7 @@ ssh -i {{SSH_KEY_PATH}} {{REMOTE_USER}}@{{REMOTE_HOST}} "docker inspect {{APP_CO
 **If rollback still has issues**:
 
 - Try rolling back to an even older version
-- Check if issue is environmental (database, Redis, etc.)
+- Check if issue is environmental (database, Cache, etc.)
 - Escalate to team for investigation
 
 ### 9. Rollback Report
@@ -221,7 +221,7 @@ If rollback target image not found:
 
 If rollback doesn't fix issue:
 
-- Problem may be environmental (database, Redis, config)
+- Problem may be environmental (database, Cache, config)
 - Check database status
 - Verify environment variables unchanged
 - Try even older version

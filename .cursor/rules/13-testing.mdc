@@ -1,6 +1,6 @@
 ---
-description: "Testing rules for pytest, integration tests, and E2E Docker framework."
-globs: "tests/**/*.py,tests/**"
+description: "Testing rules for Jest, unit and integration tests, and coverage thresholds."
+globs: "tests/**/*.ts,tests/**/*.test.ts,tests/**"
 alwaysApply: false
 ---
 
@@ -10,9 +10,9 @@ These rules apply when writing or modifying tests.
 
 ## Testing Stack
 
-- **Unit/Integration**: pytest with pytest-asyncio
-- **E2E**: Docker-based framework (`docker-compose.test.yml`)
-- **Coverage**: pytest-cov
+- **Framework**: Jest with TypeScript support
+- **Coverage**: Built-in Jest coverage (`--coverage`)
+- **Runner**: `npm test`
 
 ## Test Organization
 
@@ -20,28 +20,37 @@ These rules apply when writing or modifying tests.
 tests/
   unit/           # Fast, isolated unit tests
   integration/    # API and database integration tests
-  e2e/            # End-to-end tests (Docker required)
 ```
 
 ## Running Tests
 
 ```bash
-# Unit tests
-pytest tests/unit/
-
-# Integration tests
-pytest tests/integration/
-
-# E2E tests
-pytest tests/e2e/
-# or: make test-e2e
-
 # All tests
-pytest tests/ -v
+npm test
+
+# Single test file
+npx jest tests/specific-file.test.ts
+
+# Tests matching a pattern
+npx jest --testPathPattern="keyword"
+
+# With coverage
+npx jest --coverage
 
 # Full CI validation
-{{CI_VALIDATE_COMMAND}}
+npm test && npm run build
 ```
+
+## Coverage Thresholds
+
+These thresholds are enforced in Jest configuration:
+
+| Metric      | Minimum |
+|-------------|---------|
+| Branches    | 70%     |
+| Functions   | 80%     |
+| Lines       | 80%     |
+| Statements  | 80%     |
 
 ## Test Patterns
 
@@ -51,27 +60,17 @@ See `patterns_library/testing/api-integration-test.md` for the full pattern.
 
 Key points:
 - Mock authentication for isolated testing
-- Verify RLS context is used (no direct ORM calls)
+- Verify RLS context is used (no direct query calls)
 - Test both success and error paths
 - Test authentication failures (401)
 - Test authorization failures (403)
-- Test input validation errors (422)
-
-### E2E Tests
-
-See `patterns_library/testing/e2e-user-flow.md` for the full pattern.
-
-Key points:
-- Use `docker-compose.test.yml` for infrastructure
-- Test complete user journeys
-- Include login/auth setup in fixtures
-- Clean up test data after each run
+- Test input validation errors (400/422)
 
 ## Writing Good Tests
 
 1. **Independent**: Tests must not depend on execution order
 2. **Repeatable**: Same result every time, no flaky tests
-3. **Clear naming**: `test_<what>_<condition>_<expected>`
+3. **Clear naming**: `describe('module') > it('should do X when Y')`
 4. **Arrange-Act-Assert**: Follow the AAA pattern
 5. **Edge cases**: Cover boundary conditions, empty states, error paths
 6. **RLS isolation**: Verify user A cannot access user B's data
@@ -87,18 +86,21 @@ Key points:
 
 When testing a spec, map each acceptance criterion to at least one test:
 
-```python
-# From spec: "User can create new resource"
-def test_user_can_create_resource():
-    ...
+```typescript
+// From spec: "User can create new resource"
+it('should create a resource for an authenticated user', async () => {
+  // ...
+});
 
-# From spec: "Validation shows errors for invalid input"
-def test_create_resource_invalid_input_returns_422():
-    ...
+// From spec: "Validation shows errors for invalid input"
+it('should return 422 for invalid input', async () => {
+  // ...
+});
 
-# From spec: "Unauthorized access returns 401"
-def test_create_resource_unauthenticated_returns_401():
-    ...
+// From spec: "Unauthorized access returns 401"
+it('should return 401 for unauthenticated requests', async () => {
+  // ...
+});
 ```
 
 ## Key References

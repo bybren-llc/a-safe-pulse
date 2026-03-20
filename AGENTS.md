@@ -37,10 +37,10 @@
 | **System Architect**                 | Pattern validation, Stage 1 PR review, migration approval, architectural decisions                | ADR created, PR technical review complete, no conflicts     | Read, Grep, ADR templates           |
 | **FE Developer**                     | UI components, client-side logic, user interactions                                               | Lint and build passes                                       | Read, Write, Edit, Bash             |
 | **BE Developer**                     | API routes, server logic, RLS enforcement                                                         | Integration tests pass                                      | Read, Write, Edit, Bash             |
-| **DE** (Data Engineer)               | Schema changes, migrations, database architecture                                                 | Migration applied, RLS maintained                           | Prisma, SQL, migration tools        |
+| **DE** (Data Engineer)               | Schema changes, migrations, database architecture                                                 | Migration applied, RLS maintained                           | pg, SQL, raw SQL migrations         |
 | **TW** (Technical Writer)            | Documentation, guides, technical content                                                          | Markdown lint passes                                        | Read, Write, Edit, Grep, Glob, Bash |
-| **DPE** (Data Provisioning Engineer) | Test data, database access, data validation                                                       | Test data available, DB accessible                          | SQL, Prisma Studio, scripts         |
-| **QAS** (Quality Assurance)          | **GATE OWNER**: Execute testing, validate ACs, iteration authority, evidence to Linear            | All ACs verified, evidence posted, Exit: "Approved for RTE" | Playwright, Jest, Linear MCP        |
+| **DPE** (Data Provisioning Engineer) | Test data, database access, data validation                                                       | Test data available, DB accessible                          | SQL, psql, scripts                  |
+| **QAS** (Quality Assurance)          | **GATE OWNER**: Execute testing, validate ACs, iteration authority, evidence to Linear            | All ACs verified, evidence posted, Exit: "Approved for RTE" | Jest, Linear MCP                    |
 | **SecEng** (Security Engineer)       | Security validation, RLS checks, vulnerability assessment (Independence Gate - not collapsible)   | Security audit passed, RLS enforced                         | RLS scripts, security tools         |
 | **RTE** (Release Train Engineer)     | **PR SHEPHERD**: PR creation, CI/CD monitoring (NO code, NO merge) - Exit: "Ready for HITL"       | PR created, CI green, Exit: "Ready for HITL Review"         | Git, GitHub CLI, CI tools           |
 
@@ -53,9 +53,9 @@ Skills are loaded progressively—metadata at startup, full content when context
 | `safe-workflow`          | Commits, branches, PRs | SAFe format, rebase-first workflow          |
 | `pattern-discovery`      | Before writing code    | Pattern-first development (MANDATORY)       |
 | `rls-patterns`           | Database operations    | RLS context helpers (withUserContext, etc.) |
-| `frontend-patterns`      | UI work                | Clerk, shadcn, Next.js patterns             |
+| `frontend-patterns`      | UI work                | CLI interface patterns                      |
 | `api-patterns`           | API route creation     | Route structure, error handling             |
-| `testing-patterns`       | Writing tests          | Jest, Playwright patterns                   |
+| `testing-patterns`       | Writing tests          | Jest patterns                               |
 | `orchestration-patterns` | Multi-step work        | Agent loop, evidence-based delivery         |
 | `agent-coordination`     | Multi-agent work       | Assignment matrix, escalation patterns      |
 | `team-coordination`    | Agent Teams spawn     | Multi-agent orchestration (experimental)  |
@@ -91,7 +91,10 @@ npm run ci:validate && echo "CI SUCCESS" || echo "CI FAILED"
 ### Database Migration
 
 ```bash
-npx prisma migrate dev --name migration_name && echo "MIGRATION SUCCESS" || echo "MIGRATION FAILED"
+# Create a new raw SQL migration file in src/db/migrations/
+# Follow naming convention: XXX_description.sql
+# Register in src/db/migrations/index.ts
+# Migrations run automatically on application startup
 ```
 
 ## SAFe Specs-Driven Workflow

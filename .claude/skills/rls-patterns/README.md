@@ -3,12 +3,12 @@
 ![Status](https://img.shields.io/badge/status-production-green)
 ![Harness](https://img.shields.io/badge/harness-v2.10.0-blue)
 
-> Row Level Security patterns for database operations. NEVER use direct prisma calls.
+> Row Level Security patterns for database operations. Uses direct pg (node-postgres) queries -- no ORM.
 
 ## License
 
 **License:** MIT (see [/LICENSE](/LICENSE))
-**Copyright:** © 2026 J. Scott Graham ([@cheddarfox](https://github.com/cheddarfox)) / [ByBren, LLC](https://github.com/bybren-llc)
+**Copyright:** (c) 2026 J. Scott Graham ([@cheddarfox](https://github.com/cheddarfox)) / [ByBren, LLC](https://github.com/bybren-llc)
 **Attribution:** Required per [/NOTICE](/NOTICE)
 
 ## Intellectual Property
@@ -18,27 +18,27 @@ The skill system architecture and ASP harness methodology are the intellectual p
 ## Quick Start
 
 This skill activates automatically when you:
-- Write any Prisma database query
-- Create or modify API routes that access the database
+- Write any database query via `query()` or `getClient()`
+- Create or modify Express API routes that access the database
 - Implement webhook handlers
-- Work with user data, payments, or subscriptions
+- Work with organization-scoped data
 
 ## What This Skill Does
 
-Enforces Row Level Security (RLS) patterns for all database operations. Ensures data isolation and prevents cross-user data access at the database level. All queries MUST use `withUserContext`, `withAdminContext`, or `withSystemContext` helpers.
+Enforces data isolation patterns for all database operations. All queries MUST use parameterized SQL (`$1`, `$2`, etc.) via the `query()` and `getClient()` helpers in `src/db/connection.ts`. Documents current application-level isolation and target PostgreSQL RLS architecture.
 
 ## Trigger Keywords
 
 | Primary | Secondary |
 |---------|-----------|
-| database | prisma |
-| query | RLS |
-| user data | context |
-| findMany | findUnique |
+| database | query |
+| SQL | pg |
+| connection | transaction |
+| data isolation | parameterized |
 
 ## Related Skills
 
-- [api-patterns](../api-patterns/) - API route implementation
+- [api-patterns](../api-patterns/) - Express API route implementation
 - [security-audit](../security-audit/) - Security validation
 - [migration-patterns](../migration-patterns/) - Database schema changes
 
@@ -46,7 +46,7 @@ Enforces Row Level Security (RLS) patterns for all database operations. Ensures 
 
 | Field | Value |
 |-------|-------|
-| Last Updated | 2026-01-04 |
+| Last Updated | 2026-03-19 |
 | Harness Version | v2.10.0 |
 
 ---

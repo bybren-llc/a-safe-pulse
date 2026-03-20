@@ -14,7 +14,7 @@ Execute dependency audit to identify optimization opportunities and security iss
 Check for vulnerabilities:
 
 ```bash
-yarn audit
+npm audit
 ```
 
 Report:
@@ -28,7 +28,7 @@ Report:
 Run bundle analyzer:
 
 ```bash
-ANALYZE=true yarn build
+ANALYZE=true npm run build
 ```
 
 Identify:
@@ -56,7 +56,7 @@ Find:
 Check for updates:
 
 ```bash
-yarn outdated
+npm outdated
 ```
 
 Report:
@@ -99,7 +99,7 @@ Document findings in `docs/agent-outputs/technical-docs/dependency-audit-report-
 
 **Date**: {current-date}
 **Scope**: Full dependency audit
-**Tools**: yarn audit, depcheck, bundle-analyzer
+**Tools**: npm audit, depcheck
 
 ## Executive Summary
 

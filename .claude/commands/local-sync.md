@@ -86,26 +86,26 @@ Detect what changed to determine necessary steps:
 
 ```bash
 # Check if package.json changed
-DEPS_CHANGED=$(git diff HEAD@{1} HEAD -- package.json yarn.lock)
+DEPS_CHANGED=$(git diff HEAD@{1} HEAD -- package.json package-lock.json)
 
-# Check if prisma schema changed
-SCHEMA_CHANGED=$(git diff HEAD@{1} HEAD -- prisma/schema.prisma prisma/migrations/)
+# Check if database migrations changed
+SCHEMA_CHANGED=$(git diff HEAD@{1} HEAD -- src/db/migrations/)
 ```
 
 **Decision Logic:**
 
-- If `$DEPS_CHANGED` is empty → **Skip Step 5 (yarn install)**
-- If `$SCHEMA_CHANGED` is empty → **Skip Step 6 (Prisma operations)**
+- If `$DEPS_CHANGED` is empty → **Skip Step 5 (npm install)**
+- If `$SCHEMA_CHANGED` is empty → **Skip Step 6 (migration check)**
 - If both empty → **Fast path: Jump to Step 7 (Docker check)**
 
 ### 5. Install Dependencies (Conditional)
 
-#### Only run if package.json or yarn.lock changed
+#### Only run if package.json or package-lock.json changed
 
 If `$DEPS_CHANGED` has content:
 
 ```bash
-yarn install
+npm install
 ```
 
 Show summary:
@@ -120,56 +120,48 @@ If `$DEPS_CHANGED` is empty:
 ⏭️  Skipped: No dependency changes detected
 ```
 
-### 6. Prisma Client Update (Conditional)
+### 6. Database Migration Check (Conditional)
 
-#### Only run if schema or migrations changed
+#### Only run if migrations changed
 
 If `$SCHEMA_CHANGED` has content:
 
-```bash
-npx prisma generate
-```
-
-Check for pending migrations:
+Check for new migration files:
 
 ```bash
-npx prisma migrate status
+ls -la src/db/migrations/
 ```
 
-If migrations pending:
-
-- Show migration names
-- Offer to run: `npx prisma migrate deploy`
-- OR suggest: `npx prisma migrate dev` for development
+Note: Raw SQL migrations in `src/db/migrations/` run automatically on application startup.
+Review any new migration files to understand schema changes.
 
 If `$SCHEMA_CHANGED` is empty:
 
 ```text
-⏭️  Skipped: No schema changes detected
+⏭️  Skipped: No migration changes detected
 ```
 
 ### 7. Validation (Optional)
 
 #### Only run if user opts in
 
-Ask user: "Run full validation (yarn ci:validate)? This takes ~30s. (y/N)"
+Ask user: "Run full validation (npm test && npm run build)? This takes ~30s. (y/N)"
 
 If user chooses Yes:
 
 ```bash
-yarn ci:validate
+npm test && npm run build
 ```
 
 This runs:
 
-1. `yarn type-check` - TypeScript validation
-2. `yarn lint` - ESLint validation
-3. `yarn test:unit` - Unit tests
+1. `npm test` - Jest test suite
+2. `npm run build` - TypeScript production build
 
 If user chooses No or skips:
 
 ```text
-⏭️  Skipped: Run 'yarn ci:validate' manually if needed
+⏭️  Skipped: Run 'npm test && npm run build' manually if needed
 ```
 
 ### 8. Docker Services Check
@@ -205,23 +197,22 @@ Dependencies
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 package.json:  ✅ No changes
-yarn.lock:     ✅ No changes
+package-lock.json:     ✅ No changes
 Status:        ⏭️  Skipped (no changes)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Database
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Prisma Schema: ✅ No changes
-Migrations:    ✅ All applied (14 total)
-Client:        ⏭️  Skipped (schema unchanged)
+Migrations:    ✅ No changes (7 total in src/db/migrations/)
+Status:        ⏭️  Skipped (no migration changes)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Validation
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Status:        ⏭️  Skipped (user opted out)
-Suggestion:    Run `yarn ci:validate` manually if needed
+Suggestion:    Run `npm test && npm run build` manually if needed
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Docker Services (ASP-401: STANDARD Ports)
@@ -229,7 +220,6 @@ Docker Services (ASP-401: STANDARD Ports)
 
 a-safe-pulse-dev-app:        ✅ Up 3 hours (healthy) → port 3000
 a-safe-pulse-dev-postgres:   ✅ Up 3 hours (healthy) → port 5432
-a-safe-pulse-dev-redis:      ✅ Up 3 hours (healthy) → port 6379
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Summary
@@ -239,7 +229,7 @@ Summary
 ✅ Ready for development
 
 Next Steps:
-• Start dev server: yarn dev
+• Start dev server: npm run dev
 • View local app: http://localhost:3000
 • Check health: /local-health
 ```
@@ -264,62 +254,59 @@ Resolution:
 4. Re-run /local-sync
 ```
 
-### Yarn Install Fails
+### npm Install Fails
 
 If dependency installation fails:
 
 ```bash
 # Clear cache and retry
-yarn cache clean
+npm cache clean --force
 rm -rf node_modules
-yarn install
+npm install
 ```
 
-### Prisma Generate Fails
+### Migration Issues
 
-If Prisma client generation fails:
+If migrations fail on startup:
 
 ```bash
-# Check schema validity
-npx prisma validate
+# Check migration files
+ls -la src/db/migrations/
 
-# Force regenerate
-npx prisma generate --force
+# Connect to database directly to inspect state
+docker exec -it cheddarfox-team-postgres-1 psql -U cheddarfox_app_user -d linear_agent
 ```
 
-### ci:validate Fails
+### Validation Fails
 
 If validation fails, show specific failures:
 
-- **TypeScript errors**: Run `yarn type-check` to see details
-- **ESLint errors**: Run `yarn lint` to see details
-- **Test failures**: Run `yarn test:unit` to see details
+- **Test failures**: Run `npm test` to see details
+- **Build errors**: Run `npm run build` to see details
 
 Provide command to fix each type of error.
 
 ### Database Migration Pending
 
-If migrations not applied:
+If new migrations detected:
 
 ```text
-⚠️  PENDING MIGRATIONS DETECTED
+⚠️  NEW MIGRATIONS DETECTED
 
-Migrations to apply:
-• 20250115123456_add_user_roles
-• 20250116234567_add_audit_fields
+New migration files in src/db/migrations/:
+• 006_add_user_roles.sql
+• 007_add_audit_fields.sql
 
-Options:
-1. Apply migrations: npx prisma migrate deploy
-2. Apply with dev mode: npx prisma migrate dev
-3. Skip for now (re-run sync later)
+Migrations run automatically on application startup.
+Restart the app to apply: npm run dev
 ```
 
 ## Success Criteria
 
 - ✅ Git pull successful
 - ✅ Dependencies installed (if changed)
-- ✅ Prisma client generated (if schema changed)
-- ✅ No pending migrations (or applied if schema changed)
+- ✅ Migration files reviewed (if changed)
+- ✅ No unexpected migration changes
 - ✅ Docker services running
 - ✅ Clear status report with skip reasons provided
 - ⚠️ CI validation optional (user choice)
@@ -329,8 +316,8 @@ Options:
 - `/local-health` - Check local environment health
 - `/local-restart` - Restart Docker services
 - `/local-logs` - View application logs
-- `yarn dev` - Start development server
-- `yarn ci:validate` - Run validation manually
+- `npm run dev` - Start development server
+- `npm test && npm run build` - Run validation manually
 
 ## Notes
 
@@ -352,14 +339,14 @@ Options:
 
 - Git status and latest commits
 - Docker services status
-- Package.json/yarn.lock changes (detection only)
-- Prisma schema changes (detection only)
+- Package.json/package-lock.json changes (detection only)
+- Database migration file changes (detection only)
 
 **What Gets Skipped** (Smart Detection):
 
-- yarn install (if no dependency changes)
-- Prisma generate (if schema unchanged)
-- Prisma migrate status (if schema unchanged)
+- npm install (if no dependency changes)
+- Migration review (if unchanged)
+
 - CI validation (user must opt in - not run by default)
 
 **Performance**:

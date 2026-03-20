@@ -38,8 +38,8 @@ Before ANY deployment:
 
 ```bash
 # Validate before deploy
-yarn ci:validate
-yarn build
+npm test && npm run build
+npm run build
 ```
 
 ## Post-Deployment Smoke Test

@@ -55,11 +55,6 @@ ssh -i {{SSH_KEY_PATH}} {{REMOTE_USER}}@{{REMOTE_HOST}} "docker logs {{DB_CONTAI
 # PostgreSQL logs (dev)
 ssh -i {{SSH_KEY_PATH}} {{REMOTE_USER}}@{{REMOTE_HOST}} "docker logs {{DB_CONTAINER_DEV}} --tail 100"
 
-# Redis logs (staging)
-ssh -i {{SSH_KEY_PATH}} {{REMOTE_USER}}@{{REMOTE_HOST}} "docker logs {{REDIS_CONTAINER_STAGING}} --tail 100"
-
-# Redis logs (dev)
-ssh -i {{SSH_KEY_PATH}} {{REMOTE_USER}}@{{REMOTE_HOST}} "docker logs {{REDIS_CONTAINER_DEV}} --tail 100"
 ```
 
 ### 3. Filter and Highlight
@@ -96,7 +91,7 @@ Provide quick analysis:
 Dev Containers (STANDARD port {{DEV_PORT}})
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-{{APP_CONTAINER_DEV}} (Next.js):
+{{APP_CONTAINER_DEV}} (Node.js):
   Status:    ✅ Running
   Errors:    0
   Warnings:  2
@@ -107,33 +102,23 @@ Dev Containers (STANDARD port {{DEV_PORT}})
   Errors:    0
   Last Line: [14:34:10] database system is ready
 
-{{REDIS_CONTAINER_DEV}}:
-  Status:    ✅ Running
-  Errors:    0
-  Last Line: [14:34:08] Ready to accept connections
-
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Staging Containers (port {{STAGING_PORT}})
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-{{APP_CONTAINER_STAGING}} (Next.js):
+{{APP_CONTAINER_STAGING}} (Node.js):
   Status:    ✅ Running
   Errors:    0
   Warnings:  1
   Last Line: [14:35:22] Ready on http://localhost:{{STAGING_PORT}}
   Recent warnings:
     [14:34:15] WARN: Using development build
-    [14:34:18] WARN: PostHog not initialized (missing key)
+    [14:34:18] WARN: App not initialized (missing config)
 
 {{DB_CONTAINER_STAGING}}:
   Status:    ✅ Running
   Errors:    0
   Last Line: [14:34:10] database system is ready
-
-{{REDIS_CONTAINER_STAGING}}:
-  Status:    ✅ Running
-  Errors:    0
-  Last Line: [14:34:08] Ready to accept connections
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Overall Health: ✅ Healthy
@@ -173,7 +158,6 @@ ssh -i {{SSH_KEY_PATH}} {{REMOTE_USER}}@{{REMOTE_HOST}} "docker logs {{APP_CONTA
 
 - "ERROR" - All errors
 - "database" - Database connection logs
-- "Redis" - Redis connection logs
 - "API" - API request logs
 - "POST /api" - POST requests only
 
@@ -261,15 +245,13 @@ If user specifies container name, map to appropriate container:
 
 Staging mode:
 
-- `app` or `next` → {{APP_CONTAINER_STAGING}}
+- `app` or `node` → {{APP_CONTAINER_STAGING}}
 - `postgres` or `db` → {{DB_CONTAINER_STAGING}}
-- `redis` → {{REDIS_CONTAINER_STAGING}}
 
 Dev mode:
 
-- `app` or `next` → {{APP_CONTAINER_DEV}}
+- `app` or `node` → {{APP_CONTAINER_DEV}}
 - `postgres` or `db` → {{DB_CONTAINER_DEV}}
-- `redis` → {{REDIS_CONTAINER_DEV}}
 
 ## Success Criteria
 
@@ -301,8 +283,6 @@ Dev mode:
 | `{{APP_CONTAINER_STAGING}}`   | Staging app container name      | `myapp-staging`             |
 | `{{DB_CONTAINER_DEV}}`        | Dev database container name     | `myapp-dev-postgres`        |
 | `{{DB_CONTAINER_STAGING}}`    | Staging database container name | `myapp-staging-postgres`    |
-| `{{REDIS_CONTAINER_DEV}}`     | Dev Redis container name        | `myapp-dev-redis`           |
-| `{{REDIS_CONTAINER_STAGING}}` | Staging Redis container name    | `myapp-staging-redis`       |
 | `{{DEV_PORT}}`                | Port your dev app runs on       | `3000`                      |
 | `{{STAGING_PORT}}`            | Port your staging app runs on   | `3001`                      |
 
@@ -321,8 +301,6 @@ APP_CONTAINER_DEV=myapp-dev
 APP_CONTAINER_STAGING=myapp-staging
 DB_CONTAINER_DEV=myapp-dev-postgres
 DB_CONTAINER_STAGING=myapp-staging-postgres
-REDIS_CONTAINER_DEV=myapp-dev-redis
-REDIS_CONTAINER_STAGING=myapp-staging-redis
 
 # Ports
 DEV_PORT=3000

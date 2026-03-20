@@ -111,10 +111,10 @@ and maintain system integrity through pattern enforcement and decision documenta
 
 ```bash
 # Verify no architectural conflicts
-yarn lint && yarn type-check && echo "ARCHITECTURE SUCCESS" || echo "ARCHITECTURE FAILED"
+npx tsc --noEmit && npx tsc --noEmit && echo "ARCHITECTURE SUCCESS" || echo "ARCHITECTURE FAILED"
 
 # Verify build integrity
-yarn build && echo "BUILD SUCCESS" || echo "BUILD FAILED"
+npm run build && echo "BUILD SUCCESS" || echo "BUILD FAILED"
 ```
 
 ## Pattern Discovery (MANDATORY)
@@ -426,14 +426,14 @@ gh pr checks [PR_NUMBER]
 # Verify code follows established patterns
 grep -r "withUserContext|withAdminContext|withSystemContext" [changed_files]
 
-# Check for direct Prisma calls (FORBIDDEN)
+# Check for direct SQL without pool module (FORBIDDEN)
 grep -r "prisma\." [changed_files] | grep -v "withUserContext|withAdminContext|withSystemContext"
 ```
 
 ✅ **RLS Context Enforcement**:
 
 - [ ] Database operations use `withUserContext()`, `withAdminContext()`, or `withSystemContext()`
-- [ ] No direct Prisma client calls (e.g., `prisma.user.findMany()`)
+- [ ] No direct Prisma client calls (e.g., `pool.query("SELECT * FROM users")()`)
 - [ ] RLS context matches operation type (user data = withUserContext, admin = withAdminContext)
 - [ ] Session variables properly set
 
@@ -465,7 +465,7 @@ cat prisma/migrations/[migration_name]/migration.sql
 
 ```bash
 # Run type checking
-yarn type-check
+npx tsc --noEmit
 
 # Verify no 'any' types introduced (acceptable exceptions documented)
 grep -r ": any" [changed_files]
@@ -478,7 +478,7 @@ grep -r ": any" [changed_files]
 grep -r "try {" [changed_files]
 
 # Verify error responses
-grep -r "NextResponse.json.*error" [changed_files]
+grep -r "Response.json.*error" [changed_files]
 grep -r "throw new Error" [changed_files]
 ```
 
@@ -564,8 +564,8 @@ grep -r "similar_functionality" app/ lib/
 
 1. **RLS Context Missing** (Line XX in [file])
    - **Issue**: Direct Prisma call without RLS context
-   - **Code**: `prisma.user.findMany()`
-   - **Fix**: Wrap in `withUserContext(prisma, userId, async (client) => {...})`
+   - **Code**: `pool.query("SELECT * FROM users")()`
+   - **Fix**: Wrap in `withUserContext(pool, userId, async (client) => {...})`
    - **Risk**: Cross-user data access vulnerability
 
 2. **Authentication Missing** (Line YY in [file])
@@ -919,7 +919,7 @@ Accepted
 ### Validation Results
 
 \`\`\`bash
-yarn lint && yarn type-check && yarn build
+npx tsc --noEmit && npx tsc --noEmit && npm run build
 
 # [Output]
 
@@ -937,12 +937,12 @@ yarn lint && yarn type-check && yarn build
 
 ```typescript
 // User operation - automatic context setting
-const result = await withUserContext(prisma, userId, async (client) => {
+const result = await withUserContext(pool, userId, async (client) => {
   return client.tableName.findMany({ where: { user_id: userId } });
 });
 
 // Admin operation - requires admin role
-const adminResult = await withAdminContext(prisma, userId, async (client) => {
+const adminResult = await withAdminContext(pool, userId, async (client) => {
   return client.tableName.findMany();
 });
 
@@ -960,21 +960,21 @@ const systemResult = await withSystemContext(
 
 ```typescript
 // app/api/[route]/route.ts
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { Request, Response } from "express";
+import { auth } from "src/auth";
 import { withUserContext } from "@/lib/db/rls-helpers";
 import prisma from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
   const { userId } = await auth();
   if (!userId)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const data = await withUserContext(prisma, userId, async (client) => {
+  const data = await withUserContext(pool, userId, async (client) => {
     return client.tableName.findMany({ where: { user_id: userId } });
   });
 
-  return NextResponse.json({ data });
+  return Response.json({ data });
 }
 ```
 
@@ -982,7 +982,7 @@ export async function GET(req: NextRequest) {
 
 ```typescript
 // components/feature/ComponentName.tsx
-import { useAuth } from "@clerk/nextjs";
+import { getAuthToken } from "../auth/oauth";
 
 export function ComponentName() {
   const { userId } = useAuth();
@@ -1015,7 +1015,7 @@ export function ComponentName() {
 Before approving PR for Stage 2:
 
 1. **Pattern Validation Complete**
-   - [ ] RLS context enforced (no direct Prisma calls)
+   - [ ] RLS context enforced (no direct SQL without pool module)
    - [ ] Authentication checks present
    - [ ] TypeScript types valid
    - [ ] Error handling comprehensive

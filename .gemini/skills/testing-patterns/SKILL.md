@@ -1,6 +1,6 @@
 ---
 name: testing-patterns
-description: Testing patterns for Jest and Playwright. Use when writing tests, setting up test fixtures, or validating RLS enforcement. Routes to existing test conventions.
+description: Testing patterns for Jest unit and integration tests. Use when writing tests, setting up test fixtures, or validating implementations. Jest only -- tests in `tests/` directory.
 ---
 
 # Testing Patterns Skill
@@ -12,34 +12,29 @@ Guide consistent and effective testing. Routes to existing test patterns and pro
 ## When This Skill Applies
 
 - Writing unit or integration tests
-- Setting up test fixtures with RLS
+- Setting up test fixtures
 - Running test suites
 - Packaging test evidence
 
 ## Critical Rules
 
-### ❌ FORBIDDEN
+### FORBIDDEN
 
 ```typescript
-// Direct Prisma calls bypass RLS
-const user = await prisma.user.findUnique({ where: { user_id } });
-
 // Shared test state causes flaky tests
-let sharedUser: User;
-beforeAll(() => { sharedUser = createUser(); });
+let sharedData: any;
+beforeAll(() => { sharedData = createData(); });
+
+// Hard-coded IDs cause test pollution
+const userId = "user-123";
 ```
 
-### ✅ CORRECT
+### CORRECT
 
 ```typescript
-// Use RLS context helpers
-const user = await withSystemContext(prisma, "test", async (client) => {
-  return client.user.findUnique({ where: { user_id } });
-});
-
-// Isolated test state
+// Isolated test state per test
 beforeEach(() => {
-  const testUser = createTestUser();
+  const testData = createTestData();
 });
 
 // Unique identifiers
@@ -49,19 +44,28 @@ const userId = `user-${crypto.randomUUID()}`;
 ## Test Commands
 
 ```bash
-yarn test:unit              # Unit tests
-yarn test:integration       # Integration tests
-yarn test:e2e               # E2E tests (Playwright)
-yarn ci:validate            # Full validation
+npm test                              # Run all tests
+npm run test:watch                    # Watch mode
+npx jest tests/specific-file.test.ts  # Single file
+npx jest --testPathPattern="keyword"  # Pattern match
+npm test -- --coverage                # With coverage
 ```
+
+## Coverage Thresholds
+
+| Metric     | Threshold |
+| ---------- | --------- |
+| Branches   | 70%       |
+| Functions  | 80%       |
+| Lines      | 80%       |
+| Statements | 80%       |
 
 ## Test Directory Structure
 
 ```
-__tests__/
+tests/
 ├── unit/              # Fast, isolated tests
 ├── integration/       # API and database tests
-├── e2e/               # End-to-end tests
 └── setup.ts           # Global setup
 ```
 
@@ -70,7 +74,7 @@ __tests__/
 ```markdown
 **Test Execution Evidence**
 
-**Test Suite**: [unit/integration/e2e]
+**Test Suite**: [unit/integration]
 **Files Changed**: [list files]
 
 **Test Results:**
@@ -80,11 +84,11 @@ __tests__/
 
 **Commands Run:**
 ```bash
-yarn test:unit --coverage
+npm test -- --coverage
 ```
 ```
 
 ## Reference
 
 - **Jest Config**: `jest.config.js`
-- **RLS Context**: `lib/rls-context.ts`
+- **Test Directory**: `tests/`

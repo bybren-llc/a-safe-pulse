@@ -1,6 +1,6 @@
 ---
 name: testing-patterns
-description: Testing patterns for Jest and Playwright. Use when writing tests, setting up test fixtures, or validating RLS enforcement. Routes to existing test conventions and provides evidence templates.
+description: Testing patterns for Jest unit and integration tests. Use when writing tests, setting up test fixtures, or validating implementations. Jest only -- tests in `tests/` directory.
 allowed-tools: Read, Bash, Grep, Glob
 ---
 
@@ -16,40 +16,32 @@ Invoke this skill when:
 
 - Writing new unit tests
 - Creating integration tests
-- Setting up test fixtures with RLS
+- Setting up test fixtures
 - Running test suites
 - Packaging test evidence for Linear
 
 ## Critical Rules
 
-### ❌ FORBIDDEN Patterns
+### FORBIDDEN Patterns
 
 ```typescript
-// FORBIDDEN: Direct Prisma calls in tests (bypass RLS)
-const user = await prisma.user.findUnique({ where: { user_id } });
-
 // FORBIDDEN: Shared test state (causes flaky tests)
-let sharedUser: User;
+let sharedUser: any;
 beforeAll(() => { sharedUser = createUser(); });
 
 // FORBIDDEN: Hard-coded IDs (test pollution)
 const userId = "user-123";
 
 // FORBIDDEN: Missing cleanup (leaky tests)
-it("creates user", async () => {
-  await prisma.user.create({ data: userData });
+it("creates record", async () => {
+  await createTestRecord();
   // No cleanup!
 });
 ```
 
-### ✅ CORRECT Patterns
+### CORRECT Patterns
 
 ```typescript
-// CORRECT: Use RLS context helpers
-const user = await withSystemContext(prisma, "test", async (client) => {
-  return client.user.findUnique({ where: { user_id } });
-});
-
 // CORRECT: Isolated test state per test
 beforeEach(() => {
   const testUser = createTestUser();
@@ -61,71 +53,119 @@ const email = `test-${Date.now()}@example.com`;
 
 // CORRECT: Proper cleanup
 afterEach(async () => {
-  await withSystemContext(prisma, "test", async (client) => {
-    await client.user.deleteMany({ where: { email: { contains: "test-" } } });
-  });
+  await cleanupTestRecords();
 });
 ```
 
 ## Test Directory Structure
 
 ```
-__tests__/
+tests/
 ├── unit/              # Fast, isolated tests
-│   ├── components/    # React component tests
-│   ├── lib/           # Library function tests
 │   ├── services/      # Service layer tests
-│   └── user/          # User helper tests
+│   └── utils/         # Utility function tests
 ├── integration/       # API and database tests
-├── database/          # Database helper tests
-├── e2e/               # End-to-end tests (Playwright)
-├── payments/          # Payment flow tests
-└── setup.ts           # Global test setup
+└── setup.ts           # Global test setup (if any)
 ```
 
 ## Configuration Files
 
 - **Jest Config**: `jest.config.js`
-- **Test Setup**: `__tests__/setup.ts`
-- **Playwright Config**: `playwright.config.ts`
+- **TypeScript Config**: `tsconfig.json` (includes `tests/`)
 
-## RLS-Aware Testing
+## Coverage Thresholds
 
-### Setting Up Test Context
+| Metric     | Threshold |
+| ---------- | --------- |
+| Branches   | 70%       |
+| Functions  | 80%       |
+| Lines      | 80%       |
+| Statements | 80%       |
 
-Always use RLS context helpers in tests:
+## Test Commands
+
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run a single test file
+npx jest tests/specific-file.test.ts
+
+# Run tests matching a pattern
+npx jest --testPathPattern="keyword"
+
+# Run with coverage
+npm test -- --coverage
+```
+
+## Common Patterns
+
+### Service Layer Testing
 
 ```typescript
-import { withUserContext, withSystemContext } from "@/lib/rls-context";
-import { prisma } from "@/lib/prisma";
+import { SomeService } from '../../src/services/some-service';
 
-describe("User payments", () => {
-  const testUserId = "test-user-123";
+describe('SomeService', () => {
+  let service: SomeService;
 
-  beforeEach(async () => {
-    // Create test user with RLS context
-    await withSystemContext(prisma, "test", async (client) => {
-      await client.user.create({
-        data: {
-          user_id: testUserId,
-          email: `test-${Date.now()}@example.com`,
-          first_name: "Test",
-          last_name: "User",
-        },
-      });
-    });
+  beforeEach(() => {
+    service = new SomeService();
   });
 
-  it("should only see own payments", async () => {
-    const payments = await withUserContext(
-      prisma,
-      testUserId,
-      async (client) => {
-        return client.payments.findMany();
-      },
+  it('should process data correctly', () => {
+    const result = service.process({ input: 'test' });
+    expect(result).toHaveProperty('output');
+    expect(result.output).toBe('expected');
+  });
+});
+```
+
+### Express API Route Testing
+
+```typescript
+import request from 'supertest';
+import express from 'express';
+
+describe('GET /api/health', () => {
+  const app = express();
+  // Set up routes...
+
+  it('returns 200 with health status', async () => {
+    const response = await request(app)
+      .get('/api/health')
+      .expect(200);
+
+    expect(response.body).toHaveProperty('status', 'healthy');
+  });
+});
+```
+
+### Mocking Database Queries
+
+```typescript
+jest.mock('../../src/db/connection', () => ({
+  query: jest.fn(),
+  getClient: jest.fn(),
+}));
+
+import { query } from '../../src/db/connection';
+
+describe('with mocked database', () => {
+  it('should query with correct parameters', async () => {
+    (query as jest.Mock).mockResolvedValue({
+      rows: [{ id: 1, name: 'test' }],
+      rowCount: 1,
+    });
+
+    // Call the function under test...
+
+    expect(query).toHaveBeenCalledWith(
+      'SELECT * FROM sessions WHERE org_id = $1',
+      ['org-123']
     );
-    // RLS ensures only this user's payments returned
-    expect(payments.every((p) => p.user_id === testUserId)).toBe(true);
   });
 });
 ```
@@ -135,85 +175,8 @@ describe("User payments", () => {
 Use unique identifiers to prevent test pollution:
 
 ```typescript
+const uniqueId = `test-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 const uniqueEmail = `test-${Date.now()}@example.com`;
-const uniqueUserId = `user-${crypto.randomUUID()}`;
-```
-
-## Test Commands
-
-```bash
-# Run all unit tests
-yarn test:unit
-
-# Run integration tests
-yarn test:integration
-
-# Run specific test file
-yarn jest __tests__/unit/components/my-component.test.tsx
-
-# Run tests matching pattern
-yarn jest --testNamePattern="should handle"
-
-# Run with coverage
-yarn test:unit --coverage
-
-# Run E2E tests
-yarn test:e2e
-```
-
-## Common Patterns
-
-### Component Testing
-
-```typescript
-import { render, screen, fireEvent } from "@testing-library/react";
-import { MyComponent } from "@/components/my-component";
-
-describe("MyComponent", () => {
-  it("renders correctly", () => {
-    render(<MyComponent />);
-    expect(screen.getByRole("button")).toBeInTheDocument();
-  });
-
-  it("handles click events", async () => {
-    const onClickMock = jest.fn();
-    render(<MyComponent onClick={onClickMock} />);
-
-    fireEvent.click(screen.getByRole("button"));
-    expect(onClickMock).toHaveBeenCalledTimes(1);
-  });
-});
-```
-
-### API Route Testing
-
-```typescript
-import { GET } from "@/app/api/my-route/route";
-import { NextRequest } from "next/server";
-
-describe("GET /api/my-route", () => {
-  it("returns 200 with data", async () => {
-    const request = new NextRequest("http://localhost:3000/api/my-route");
-    const response = await GET(request);
-
-    expect(response.status).toBe(200);
-    const data = await response.json();
-    expect(data).toHaveProperty("success", true);
-  });
-});
-```
-
-### Mocking Prisma
-
-```typescript
-jest.mock("@/lib/prisma", () => ({
-  prisma: {
-    user: {
-      findUnique: jest.fn(),
-      create: jest.fn(),
-    },
-  },
-}));
 ```
 
 ## Evidence Template for Linear
@@ -223,7 +186,7 @@ When completing test work, attach this evidence block:
 ```markdown
 **Test Execution Evidence**
 
-**Test Suite**: [unit/integration/e2e]
+**Test Suite**: [unit/integration]
 **Files Changed**: [list files]
 
 **Test Results:**
@@ -235,15 +198,15 @@ When completing test work, attach this evidence block:
 
 **Coverage** (if applicable):
 
-- Statements: X%
-- Branches: X%
-- Functions: X%
-- Lines: X%
+- Statements: X% (threshold: 80%)
+- Branches: X% (threshold: 70%)
+- Functions: X% (threshold: 80%)
+- Lines: X% (threshold: 80%)
 
 **Commands Run:**
 
 \`\`\`bash
-yarn test:unit --coverage
+npm test -- --coverage
 \`\`\`
 
 **Output:**
@@ -255,19 +218,12 @@ yarn test:unit --coverage
 Always run before pushing:
 
 ```bash
-yarn ci:validate
+npm test && npm run build && echo "Ready for PR" || echo "Fix issues first"
 ```
-
-This runs:
-
-- Type checking
-- ESLint
-- Unit tests
-- Format check
 
 ## Authoritative References
 
 - **Jest Config**: `jest.config.js`
-- **Test Setup**: `__tests__/setup.ts`
-- **RLS Context**: `lib/rls-context.ts`
+- **Test Directory**: `tests/`
 - **CI Validation**: `package.json` scripts
+- **CLAUDE.md**: Coverage thresholds documented
