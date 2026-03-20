@@ -1,0 +1,88 @@
+{
+  "$schema": "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/schemas/settings.schema.json",
+  "general": {
+    "defaultApprovalMode": "default",
+    "plan": {
+      "directory": ".gemini/plans",
+      "modelRouting": true
+    },
+    "checkpointing": {
+      "enabled": false
+    },
+    "sessionRetention": {
+      "enabled": true,
+      "maxAge": "30d"
+    }
+  },
+  "context": {
+    "includePatterns": [
+      "**/*.md",
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.js",
+      "**/*.jsx",
+      "**/*.json",
+      "**/*.yaml",
+      "**/*.yml",
+      "**/*.toml",
+      "**/*.sql",
+      "**/*.prisma"
+    ],
+    "excludePatterns": [
+      "node_modules/**",
+      ".git/**",
+      "dist/**",
+      "build/**",
+      ".next/**",
+      "coverage/**",
+      "*.log",
+      ".env*"
+    ],
+    "fileFiltering": {
+      "respectGitIgnore": true,
+      "respectGeminiIgnore": true
+    }
+  },
+  "tools": {
+    "sandbox": true,
+    "useRipgrep": true,
+    "enableHooks": true
+  },
+  "model": {
+    "name": "gemini-3.1-pro"
+  },
+  "ui": {
+    "showLineNumbers": true,
+    "useFullWidth": true,
+    "inlineThinkingMode": "off"
+  },
+  "skills": {
+    "enabled": true
+  },
+  "hooksConfig": {
+    "enabled": true
+  },
+  "hooks": {},
+  "security": {
+    "folderTrust": {
+      "enabled": true
+    },
+    "environmentVariableRedaction": {
+      "enabled": false,
+      "blocked": []
+    }
+  },
+  "policyPaths": [],
+  "agents": {
+    "browser": {
+      "sessionMode": "persistent",
+      "headless": false
+    }
+  },
+  "experimental": {
+    "enableAgents": false,
+    "directWebFetch": false,
+    "plan": false
+  },
+  "mcpServers": {}
+}

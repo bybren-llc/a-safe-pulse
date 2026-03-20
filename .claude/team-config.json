@@ -1,0 +1,326 @@
+{
+  "_comment": "SAFe Agentic Workflow team configuration. Placeholders ({{...}}) are replaced by scripts/setup-template.sh during project initialization. Agents read this file to understand team structure, quality gates, and workflow settings.",
+
+  "project": {
+    "name": "a-safe-pulse",
+    "short_name": "ASP",
+    "repo": "a-safe-pulse",
+    "domain": "cheddarfox.com",
+    "github_org": "bybren-llc",
+    "company": "ByBren, LLC"
+  },
+
+  "workflow": {
+    "ticket_prefix": "ASP",
+    "ticket_prefix_lower": "asp",
+    "main_branch": "dev",
+    "linear_workspace": "cheddarfox",
+    "branch_format": "ASP-{number}-{description}",
+    "commit_format": "type(scope): description [ASP-XXX]",
+    "merge_strategy": "rebase-and-merge"
+  },
+
+  "mcp_servers": {
+    "_comment": "MCP server names used for tool invocations like mcp__<server>__<method>.",
+    "linear": "linear-mcp",
+    "confluence": "confluence-mcp"
+  },
+
+  "agents": {
+    "_comment": "The 11 SAFe agent roles. Each entry maps the role key to its config file, display name, category, and collapsibility (per TICKET_PREFIX-499 role collapsing rules).",
+
+    "tdm": {
+      "name": "Technical Delivery Manager",
+      "config_file": ".claude/agents/tdm.md",
+      "category": "planning",
+      "description": "Reactive blocker resolution, Linear updates, evidence tracking",
+      "collapsible": true,
+      "primary_tools": ["linear", "confluence"],
+      "exit_state": null
+    },
+    "bsa": {
+      "name": "Business Systems Analyst",
+      "config_file": ".claude/agents/bsa.md",
+      "category": "planning",
+      "description": "Requirements decomposition, acceptance criteria, testing strategy",
+      "collapsible": true,
+      "primary_tools": ["linear", "confluence", "markdown"],
+      "exit_state": null
+    },
+    "system-architect": {
+      "name": "System Architect",
+      "config_file": ".claude/agents/system-architect.md",
+      "category": "planning",
+      "description": "Pattern validation, Stage 1 PR review, migration approval, ADRs",
+      "collapsible": false,
+      "primary_tools": ["read", "grep", "adr-templates"],
+      "exit_state": "Stage 1 Approved - Ready for ARCHitect"
+    },
+    "fe-developer": {
+      "name": "Frontend Developer",
+      "config_file": ".claude/agents/fe-developer.md",
+      "category": "implementation",
+      "description": "UI components, client-side logic, user interactions",
+      "collapsible": true,
+      "primary_tools": ["read", "write", "edit", "bash"],
+      "exit_state": "Ready for QAS",
+      "validation_command": "npx tsc --noEmit && npm run build"
+    },
+    "be-developer": {
+      "name": "Backend Developer",
+      "config_file": ".claude/agents/be-developer.md",
+      "category": "implementation",
+      "description": "API routes, server logic, RLS enforcement",
+      "collapsible": true,
+      "primary_tools": ["read", "write", "edit", "bash"],
+      "exit_state": "Ready for QAS",
+      "validation_command": "npm test"
+    },
+    "data-engineer": {
+      "name": "Data Engineer",
+      "config_file": ".claude/agents/data-engineer.md",
+      "category": "implementation",
+      "description": "Schema changes, migrations, database architecture",
+      "collapsible": true,
+      "primary_tools": ["prisma", "sql", "migration-tools"],
+      "exit_state": "Ready for QAS",
+      "validation_command": "npm run build"
+    },
+    "qas": {
+      "name": "Quality Assurance Specialist",
+      "config_file": ".claude/agents/qas.md",
+      "category": "quality",
+      "description": "Execute testing strategy, validate ACs, iteration authority",
+      "collapsible": false,
+      "primary_tools": ["playwright", "jest", "linear"],
+      "exit_state": "Approved for RTE",
+      "gate_owner": true
+    },
+    "security-engineer": {
+      "name": "Security Engineer",
+      "config_file": ".claude/agents/security-engineer.md",
+      "category": "quality",
+      "description": "Security validation, RLS checks, vulnerability assessment",
+      "collapsible": false,
+      "primary_tools": ["rls-scripts", "security-tools"],
+      "exit_state": null,
+      "gate_owner": true
+    },
+    "tech-writer": {
+      "name": "Technical Writer",
+      "config_file": ".claude/agents/tech-writer.md",
+      "category": "quality",
+      "description": "Documentation, guides, technical content",
+      "collapsible": true,
+      "primary_tools": ["read", "write", "edit", "grep", "glob", "bash"],
+      "exit_state": null,
+      "validation_command": "echo 'no markdown linter configured'"
+    },
+    "dpe": {
+      "name": "Data Provisioning Engineer",
+      "config_file": ".claude/agents/data-provisioning-eng.md",
+      "category": "quality",
+      "description": "Test data, database access, data validation",
+      "collapsible": true,
+      "primary_tools": ["sql", "prisma-studio", "scripts"],
+      "exit_state": null
+    },
+    "rte": {
+      "name": "Release Train Engineer",
+      "config_file": ".claude/agents/rte.md",
+      "category": "release",
+      "description": "PR creation, CI/CD monitoring, no code, no merge",
+      "collapsible": true,
+      "primary_tools": ["git", "github-cli", "ci-tools"],
+      "exit_state": "Ready for HITL Review"
+    }
+  },
+
+  "review_stages": {
+    "_comment": "Three-stage PR review pipeline. Each stage must pass before proceeding to the next.",
+    "stage_1": {
+      "name": "System Architect",
+      "reviewer": "system-architect",
+      "focus": "Technical and pattern validation",
+      "blocking": true
+    },
+    "stage_2": {
+      "name": "ARCHitect-in-CLI",
+      "reviewer": "cheddarfox",
+      "focus": "Comprehensive architectural review",
+      "blocking": true
+    },
+    "stage_3": {
+      "name": "HITL",
+      "reviewer": "cheddarfox",
+      "focus": "Final merge authority",
+      "blocking": true
+    }
+  },
+
+  "quality_gates": {
+    "_comment": "Quality gate commands. Each gate has a command placeholder to be filled manually with the project's actual CLI commands after running setup-template.sh.",
+    "lint": {
+      "name": "Linting",
+      "command": "npx tsc --noEmit",
+      "required": true,
+      "stage": "pre-commit"
+    },
+    "type_check": {
+      "name": "Type Checking",
+      "command": "npx tsc --noEmit",
+      "required": true,
+      "stage": "pre-commit"
+    },
+    "unit_tests": {
+      "name": "Unit Tests",
+      "command": "npm test",
+      "required": true,
+      "stage": "pre-push"
+    },
+    "integration_tests": {
+      "name": "Integration Tests",
+      "command": "npm test",
+      "required": true,
+      "stage": "pre-push"
+    },
+    "e2e_tests": {
+      "name": "End-to-End Tests",
+      "command": "echo 'no e2e tests configured'",
+      "required": false,
+      "stage": "ci"
+    },
+    "security_scan": {
+      "name": "Security Scan",
+      "command": "npm audit --audit-level=high",
+      "required": true,
+      "stage": "ci"
+    },
+    "build": {
+      "name": "Production Build",
+      "command": "npm run build",
+      "required": true,
+      "stage": "ci"
+    },
+    "ci_validate": {
+      "name": "Full CI Validation",
+      "command": "npm test && npm run build",
+      "required": true,
+      "stage": "pre-pr",
+      "_comment": "Runs all gates in sequence. Must pass before PR creation."
+    }
+  },
+
+  "gates": {
+    "_comment": "Blocking gates in the delivery pipeline. These correspond to the Gate Quick Reference in AGENTS.md.",
+    "stop_the_line": {
+      "owner": "bsa",
+      "blocking": true,
+      "description": "No acceptance criteria means no work begins"
+    },
+    "qas_gate": {
+      "owner": "qas",
+      "blocking": true,
+      "description": "QAS must approve before RTE creates PR"
+    },
+    "stage_1_review": {
+      "owner": "system-architect",
+      "blocking": true,
+      "description": "Pattern and architectural compliance check"
+    },
+    "stage_2_review": {
+      "owner": "cheddarfox",
+      "blocking": true,
+      "description": "Human architect comprehensive review in CLI"
+    },
+    "hitl_merge": {
+      "owner": "cheddarfox",
+      "blocking": true,
+      "description": "Final human merge authority"
+    }
+  },
+
+  "paths": {
+    "pattern_library": "patterns_library/",
+    "specs": "specs/",
+    "spec_templates": "specs_templates/",
+    "agent_configs": ".claude/agents/",
+    "skills": ".claude/skills/",
+    "commands": ".claude/commands/",
+    "adrs": "docs/adr/",
+    "database_docs": "docs/database/",
+    "security_docs": "docs/security/",
+    "sop_docs": "docs/sop/",
+    "ci_cd_docs": "docs/ci-cd/",
+    "onboarding_docs": "docs/onboarding/",
+    "workflow_docs": "docs/workflow/"
+  },
+
+  "agent_teams": {
+    "_comment": "Agent Teams configuration (experimental). Requires CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 in settings.json.",
+    "enabled": false,
+    "env_var": "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS",
+    "default_team_lead": "tdm",
+    "default_teammate_mode": "in-process",
+    "recommended_team_size": {
+      "story": "2-3",
+      "feature": "3-5",
+      "epic": "5-8"
+    },
+    "gate_dependencies": {
+      "_comment": "SAFe quality gates expressed as task dependencies. Blocked tasks cannot be claimed until dependencies complete.",
+      "implementation": {
+        "blocks": ["qas_validation"]
+      },
+      "qas_validation": {
+        "blockedBy": ["implementation"],
+        "blocks": ["rte_pr_creation"]
+      },
+      "rte_pr_creation": {
+        "blockedBy": ["qas_validation"],
+        "blocks": ["stage_1_review"]
+      },
+      "stage_1_review": {
+        "blockedBy": ["rte_pr_creation"],
+        "blocks": ["stage_2_review"]
+      },
+      "stage_2_review": {
+        "blockedBy": ["stage_1_review"],
+        "blocks": ["hitl_merge"]
+      },
+      "hitl_merge": {
+        "blockedBy": ["stage_2_review"]
+      }
+    },
+    "hooks": {
+      "_comment": "Hook templates for quality gate enforcement. Customize commands for your project.",
+      "TeammateIdle": {
+        "description": "Validate teammate completed assigned tasks before going idle",
+        "exit_code_2": "Sends feedback and keeps teammate working"
+      },
+      "TaskCompleted": {
+        "description": "Validate task output meets acceptance criteria before completion",
+        "exit_code_2": "Prevents completion and sends feedback"
+      }
+    }
+  },
+
+  "documentation": {
+    "_comment": "Key documentation files that agents must read before specific types of work.",
+    "mandatory_always": [
+      "CONTRIBUTING.md",
+      "AGENTS.md"
+    ],
+    "mandatory_database": [
+      "docs/database/DATA_DICTIONARY.md",
+      "docs/database/RLS_DATABASE_MIGRATION_SOP.md",
+      "docs/database/RLS_IMPLEMENTATION_GUIDE.md"
+    ],
+    "mandatory_security": [
+      "docs/security/SECURITY_FIRST_ARCHITECTURE.md"
+    ],
+    "mandatory_architecture": [
+      "docs/adr/"
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+# Claude Harness Sync Exclusions
+# Files listed here will NEVER be overwritten by upstream sync
+# Uses gitignore-style patterns
+
+# Project-specific configurations (CONFIGS only, not scripts!)
+settings.local.json
+hooks-config.json
+
+# Add any project-specific files below:
+# my-custom-file.md
