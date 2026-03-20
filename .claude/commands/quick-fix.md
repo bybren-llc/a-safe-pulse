@@ -58,16 +58,15 @@ git commit -m "fix(scope): resolve {issue} [ASP-XXX]"
 Run essential checks only:
 
 ```bash
-yarn type-check  # TypeScript
-yarn lint        # ESLint
-yarn test:unit   # Fast tests only
+npm run build    # TypeScript
+npm test         # Jest tests
+
 ```
 
 **Skip** if time-critical:
 
 - Integration tests
-- E2E tests
-- Build verification
+- Full build verification
 
 ### 4. Quick PR
 

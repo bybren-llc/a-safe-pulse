@@ -89,13 +89,13 @@ ssh -i {{SSH_KEY_PATH}} {{REMOTE_USER}}@{{REMOTE_HOST}} \
   "docker exec db pg_isready -U postgres"
 ```
 
-### 5. Redis/Cache Connectivity
+### 5. Cache/Cache Connectivity
 
-Test Redis connection:
+Test Cache connection:
 
 ```bash
 ssh -i {{SSH_KEY_PATH}} {{REMOTE_USER}}@{{REMOTE_HOST}} \
-  "docker exec {{REDIS_CONTAINER}} redis-cli ping"
+  "docker exec {{REDIS_CONTAINER}} app-cache-cli ping"
 ```
 
 Expected: `PONG`
@@ -131,7 +131,7 @@ Container Health
 
 {{PROJECT}}-app            ✅ Healthy  Up 2 hours
 {{PROJECT}}-postgres       ✅ Healthy  Up 2 hours
-{{PROJECT}}-redis          ✅ Healthy  Up 2 hours
+{{PROJECT}}-app-cache          ✅ Healthy  Up 2 hours
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Resource Usage
@@ -140,7 +140,7 @@ Resource Usage
 Container               CPU      Memory
 {{PROJECT}}-app          2.45%    312MB / 2GB  (15%)
 {{PROJECT}}-postgres     0.12%    45MB / 2GB   (2%)
-{{PROJECT}}-redis        0.08%    8MB / 2GB    (0%)
+{{PROJECT}}-app-cache        0.08%    8MB / 2GB    (0%)
 
 Disk Space:            125GB / 250GB (50% used)
 
@@ -160,7 +160,7 @@ Calculate overall health score (0-100):
 | Resource usage < 80%      | +15    |
 | No recent errors          | +15    |
 | Response time < 500ms     | +10    |
-| Database/Redis responding | +10    |
+| Database/Cache responding | +10    |
 
 **Score Interpretation**:
 
@@ -196,7 +196,7 @@ Calculate overall health score (0-100):
 | `{{APP_PORT}}`        | Port your app runs on     | `3000`                      |
 | `db`    | Database container name   | `myapp-postgres`            |
 | `postgres`         | Database username         | `app_user`                  |
-| `{{REDIS_CONTAINER}}` | Redis container name      | `myapp-redis`               |
+| `{{REDIS_CONTAINER}}` | Cache container name      | `myapp-app-cache`               |
 
 ## Related Commands
 

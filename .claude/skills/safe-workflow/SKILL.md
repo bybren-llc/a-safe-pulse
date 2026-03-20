@@ -184,8 +184,8 @@ git log origin/dev..HEAD --oneline
 
 | File                   | Risk   | Required Action                    |
 | ---------------------- | ------ | ---------------------------------- |
-| `prisma/schema.prisma` | HIGH   | Announce in Slack BEFORE touching  |
-| `prisma/migrations/*`  | HIGH   | Coordinate with all teams          |
+| `src/db/migrations/*.sql` | HIGH   | Coordinate with all teams          |
+| `src/db/connection.ts`    | HIGH   | Core database access layer         |
 | `docker-compose*.yml`  | HIGH   | All teams must restart containers  |
 | `package.json`         | MEDIUM | Run `{{INSTALL_COMMAND}}` after sync |
 | `.env.template`        | MEDIUM | Update local `.env` files          |
@@ -224,6 +224,6 @@ For complete workflow documentation, see:
 | ----------------------- | ------------------------ | --------------------- |
 | `ASP`       | Your ticket/issue prefix | `WOR`, `PROJ`, `FEAT` |
 | `dev`         | Main git branch name     | `main`, `dev`         |
-| `{{CI_VALIDATE_COMMAND}}` | CI validation command    | `yarn ci:validate`    |
-| `{{LINT_MD_COMMAND}}`     | Markdown linting command | `yarn lint:md`        |
-| `{{INSTALL_COMMAND}}`     | Package install command  | `yarn install`        |
+| `{{CI_VALIDATE_COMMAND}}` | CI validation command    | `npm test && npm run build`    |
+| `{{LINT_MD_COMMAND}}`     | Markdown linting command | `npm run lint:md`        |
+| `{{INSTALL_COMMAND}}`     | Package install command  | `npm install`        |

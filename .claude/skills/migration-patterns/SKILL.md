@@ -1,6 +1,6 @@
 ---
 name: migration-patterns
-description: Database migration creation with mandatory RLS policies and ARCHitect approval workflow. Use when creating migrations, adding tables with RLS, or updating Prisma schema.
+description: Database migration creation with mandatory RLS policies and ARCHitect approval workflow. Use when creating migrations, adding tables, or altering schemas. Raw SQL files in `src/db/migrations/` with `XXX_description.sql` naming.
 disable-model-invocation: true
 allowed-tools: Read, Bash, Grep, Glob
 ---
@@ -11,65 +11,86 @@ allowed-tools: Read, Bash, Grep, Glob
 
 Guide database migration creation with mandatory RLS policies, following security-first architecture and approval workflow.
 
+## Current Tech Stack
+
+- **Migrations**: Raw SQL files in `src/db/migrations/`
+- **Naming Convention**: `XXX_description.sql` (e.g., `001_initial_schema.sql`)
+- **Registration**: `src/db/migrations/index.ts` auto-discovers `.sql` files, runs in sorted order
+- **Execution**: Auto-run on app startup, tracked in `migrations` table
+- **Database**: PostgreSQL (prod via `DATABASE_URL`) / SQLite (dev via `SQLITE_DB_PATH`)
+- **No ORM migrations**: Raw SQL only (no ORM migration tools)
+
 ## When This Skill Applies
 
 Invoke this skill when:
 
 - Creating database migrations
-- Adding new tables (all tables need RLS)
-- Updating Prisma schema
-- Adding GRANT statements
+- Adding new tables
+- Altering existing schemas
+- Adding indexes or constraints
 - Schema impact analysis
 - Data migration planning
+
+## Existing Migrations
+
+```
+src/db/migrations/
+├── index.ts                          # Migration runner (auto-discovers .sql files)
+├── 001_initial_schema.sql            # Core tables: linear_tokens, planning_sessions, etc.
+├── 002_confluence_tokens.sql         # Confluence OAuth tokens
+├── 003_program_increments.sql        # PI planning tables
+├── 005_sync_tables.sql               # Sync state tracking
+├── 006_integrate_sync_schema.sql     # Sync schema integration
+└── 007_make_refresh_token_nullable.sql # Token schema adjustment
+```
+
+## How the Migration Runner Works
+
+The runner in `src/db/migrations/index.ts`:
+
+1. Creates a `migrations` table if it does not exist
+2. Reads all `.sql` files from the migrations directory
+3. Sorts them alphabetically (so `001` runs before `002`)
+4. Skips already-applied migrations (tracked by filename in `migrations` table)
+5. Runs each pending migration inside a transaction (BEGIN/COMMIT with ROLLBACK on error)
+6. Records each successful migration in the `migrations` table
 
 ## Stop-the-Line Conditions
 
 ### FORBIDDEN Patterns
 
 ```sql
--- FORBIDDEN: RLS policies in separate file
--- RLS MUST be in the same migration.sql file as the table creation
-
--- FORBIDDEN: Table without RLS
-CREATE TABLE user_data (...);
--- Missing: ALTER TABLE user_data ENABLE ROW LEVEL SECURITY;
-
--- FORBIDDEN: Resolve applied migrations
-npx prisma migrate resolve --applied "migration_name"
--- This bypasses migration verification
-
--- FORBIDDEN: Missing user_id index
-CREATE TABLE payments (...);
--- Missing: CREATE INDEX idx_payments_user_id ON payments(user_id);
-
 -- FORBIDDEN: Schema changes without ARCHitect approval
 -- All migrations require approval before PR
+
+-- FORBIDDEN: Missing indexes on filter/join columns
+CREATE TABLE planning_features (...);
+-- Missing: CREATE INDEX on session_id
+
+-- FORBIDDEN: Destructive operations without rollback plan
+DROP TABLE planning_sessions;
+-- Must have backup + documented rollback
 ```
 
 ### CORRECT Patterns
 
 ```sql
--- CORRECT: Complete migration with RLS in same file
-CREATE TABLE user_data (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id TEXT NOT NULL,
-  data JSONB,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+-- CORRECT: Complete migration with indexes
+-- File: src/db/migrations/008_add_audit_log.sql
+
+CREATE TABLE IF NOT EXISTS audit_log (
+  id SERIAL PRIMARY KEY,
+  organization_id TEXT NOT NULL,
+  action TEXT NOT NULL,
+  entity_type TEXT NOT NULL,
+  entity_id TEXT,
+  payload JSONB,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
--- Enable RLS (SAME FILE - MANDATORY)
-ALTER TABLE user_data ENABLE ROW LEVEL SECURITY;
-
--- User policy
-CREATE POLICY user_data_user_select ON user_data
-  FOR SELECT TO {{PROJECT}}_app_user
-  USING (user_id = current_setting('app.current_user_id', true));
-
--- Index for RLS performance (MANDATORY)
-CREATE INDEX idx_user_data_user_id ON user_data(user_id);
-
--- Grant permissions
-GRANT SELECT, INSERT, UPDATE ON user_data TO {{PROJECT}}_app_user;
+-- Index for query performance (MANDATORY for filter columns)
+CREATE INDEX IF NOT EXISTS idx_audit_log_org_id ON audit_log(organization_id);
+CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at);
 ```
 
 ## Migration Workflow (MANDATORY)
@@ -84,37 +105,41 @@ Before ANY schema change:
 3. Only proceed after explicit approval
 ```
 
-### Step 2: Create Migration
+### Step 2: Create Migration File
 
 ```bash
-# Generate migration
-npx prisma migrate dev --name descriptive_name
+# Create a new SQL migration file
+# Use next available number, descriptive name
+touch src/db/migrations/008_add_audit_log.sql
 
-# Verify migration file created
-ls prisma/migrations/
+# Verify naming follows convention
+ls src/db/migrations/*.sql
 ```
 
-### Step 3: Add RLS to Migration
+### Step 3: Write Migration SQL
 
-Edit the generated migration to include:
+Write idempotent SQL with:
 
-- [ ] `ALTER TABLE ... ENABLE ROW LEVEL SECURITY`
-- [ ] User SELECT policy
-- [ ] User INSERT policy (if applicable)
-- [ ] User UPDATE policy (if applicable)
-- [ ] Admin policies (if needed)
-- [ ] System policies (for background jobs)
-- [ ] Index on user_id column
-- [ ] GRANT statements
+- [ ] `CREATE TABLE IF NOT EXISTS` for new tables
+- [ ] All columns with types and constraints
+- [ ] Primary key defined
+- [ ] `CREATE INDEX IF NOT EXISTS` on filter/join columns
+- [ ] RLS policies (as comments if not yet enforced at DB level)
 
 ### Step 4: Verify Locally
 
 ```bash
-# Test migration
-DATABASE_URL="..." npx prisma migrate dev
+# Start the app -- migrations auto-run on startup
+npm run dev
 
-# Verify RLS is enabled
-psql -c "SELECT tablename, rowsecurity FROM pg_tables WHERE schemaname = 'public';"
+# Or run directly against PostgreSQL
+psql $DATABASE_URL -f src/db/migrations/008_add_audit_log.sql
+
+# Verify table created
+psql $DATABASE_URL -c "\dt"
+
+# Check migration was recorded
+psql $DATABASE_URL -c "SELECT * FROM migrations ORDER BY id;"
 ```
 
 ### Step 5: Update Documentation
@@ -127,36 +152,22 @@ After successful migration:
 
 ## RLS Policy Templates
 
-### User Read Policy
+When adding PostgreSQL RLS enforcement:
+
+### User/Org Isolation Policy
 
 ```sql
-CREATE POLICY {table}_user_select ON {table}
-  FOR SELECT TO {{PROJECT}}_app_user
-  USING (user_id = current_setting('app.current_user_id', true));
+ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY {table}_org_isolation ON {table}
+  FOR ALL TO app_user
+  USING (organization_id = current_setting('app.current_org_id', true));
 ```
 
-### User Write Policy
+### Index for RLS Performance
 
 ```sql
-CREATE POLICY {table}_user_insert ON {table}
-  FOR INSERT TO {{PROJECT}}_app_user
-  WITH CHECK (user_id = current_setting('app.current_user_id', true));
-```
-
-### Admin Policy
-
-```sql
-CREATE POLICY {table}_admin_all ON {table}
-  FOR ALL TO {{PROJECT}}_app_user
-  USING (current_setting('app.user_role', true) = 'admin');
-```
-
-### System Policy (Background Jobs)
-
-```sql
-CREATE POLICY {table}_system_all ON {table}
-  FOR ALL TO {{PROJECT}}_app_user
-  USING (current_setting('app.context_type', true) = 'system');
+CREATE INDEX IF NOT EXISTS idx_{table}_org_id ON {table}(organization_id);
 ```
 
 ## Migration Checklist
@@ -164,11 +175,10 @@ CREATE POLICY {table}_system_all ON {table}
 Before PR:
 
 - [ ] ARCHitect approval obtained
-- [ ] RLS policies in same migration file
-- [ ] User policies created
-- [ ] user_id index created
-- [ ] GRANT statements added
-- [ ] Local migration test passed
+- [ ] File named `XXX_description.sql` in `src/db/migrations/`
+- [ ] Uses `IF NOT EXISTS` for idempotency
+- [ ] Indexes on filter/join columns
+- [ ] Local migration test passed (app starts cleanly)
 - [ ] DATA_DICTIONARY.md updated
 - [ ] Evidence attached to Linear
 
@@ -184,8 +194,8 @@ For production migrations:
 
 ## Authoritative References
 
-- **Migration SOP**: `docs/database/RLS_DATABASE_MIGRATION_SOP.md` (MANDATORY)
+- **Migration Runner**: `src/db/migrations/index.ts` (MANDATORY -- read before creating migrations)
+- **Existing Migrations**: `src/db/migrations/*.sql` (follow existing patterns)
 - **Data Dictionary**: `docs/database/DATA_DICTIONARY.md` (update after changes)
-- **RLS Implementation**: `docs/database/RLS_IMPLEMENTATION_GUIDE.md`
-- **RLS Policies**: `docs/database/RLS_POLICY_CATALOG.md`
+- **DB Connection**: `src/db/connection.ts` (query + getClient)
 - **Security First**: `docs/guides/SECURITY_FIRST_ARCHITECTURE.md`

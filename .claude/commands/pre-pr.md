@@ -14,7 +14,7 @@ You are preparing to create a Pull Request. Execute the MANDATORY @CONTRIBUTING.
 Run CI validation suite:
 
 ```bash
-yarn ci:validate
+npm test && npm run build
 ```
 
 This runs:
@@ -31,13 +31,13 @@ This runs:
 Auto-fix markdown formatting:
 
 ```bash
-yarn lint:md:fix
+npx markdownlint-cli2 --fix "**/*.md"
 ```
 
 Verify no errors remain:
 
 ```bash
-yarn lint:md
+npx markdownlint-cli2 "**/*.md"
 ```
 
 ### 3. Git Status Check

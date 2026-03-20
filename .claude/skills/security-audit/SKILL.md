@@ -1,6 +1,6 @@
 ---
 name: security-audit
-description: RLS validation, security audits, OWASP compliance, and vulnerability scanning. Use when validating RLS policies, auditing API routes, or scanning for security issues.
+description: RLS validation, security audits, OWASP compliance, and vulnerability scanning. Use when validating data isolation, auditing Express API routes, or scanning for security issues.
 context: fork
 agent: Explore
 allowed-tools: Read, Bash, Grep, Glob
@@ -10,14 +10,14 @@ allowed-tools: Read, Bash, Grep, Glob
 
 ## Purpose
 
-Guide security validation with RLS enforcement, OWASP compliance, and vulnerability detection following security-first architecture.
+Guide security validation with data isolation enforcement, OWASP compliance, and vulnerability detection following security-first architecture.
 
 ## When This Skill Applies
 
 Invoke this skill when:
 
-- Validating RLS policies
-- Auditing API routes for auth
+- Validating data isolation and query safety
+- Auditing Express API routes for auth
 - Vulnerability scanning
 - Pre-deployment security review
 - Checking for exposed credentials
@@ -28,82 +28,85 @@ Invoke this skill when:
 ### FORBIDDEN Patterns
 
 ```typescript
-// FORBIDDEN: Direct Prisma calls (bypass RLS)
-const users = await prisma.user.findMany();
-// Must use: withUserContext, withAdminContext, or withSystemContext
+// FORBIDDEN: SQL injection via string interpolation
+const result = await query(`SELECT * FROM users WHERE id = '${userId}'`);
+// Must use: parameterized queries with $1, $2, etc.
 
 // FORBIDDEN: Missing authentication on protected routes
-export async function GET(req: Request) {
+router.get('/api/data', async (req, res) => {
   // No auth check before accessing user data
-  return getUserData();
-}
+  return res.json(await getAllData());
+});
 
 // FORBIDDEN: Exposed credentials
 const API_KEY = "sk_live_abc123"; // Hardcoded secret
 
-// FORBIDDEN: SQL injection vulnerability
-const query = `SELECT * FROM users WHERE id = ${userId}`; // Interpolated
+// FORBIDDEN: Unscoped queries exposing all rows
+const result = await query('SELECT * FROM linear_tokens');
 ```
 
 ### CORRECT Patterns
 
 ```typescript
-// CORRECT: RLS context wrapper
-const users = await withUserContext(prisma, userId, async (client) => {
-  return client.user.findMany();
-});
+// CORRECT: Parameterized queries
+const result = await query(
+  'SELECT * FROM users WHERE org_id = $1',
+  [orgId]
+);
 
 // CORRECT: Auth check before data access
-export async function GET(req: Request) {
-  const { userId } = await auth();
-  if (!userId) {
-    return new Response("Unauthorized", { status: 401 });
+router.get('/api/data', async (req: Request, res: Response) => {
+  if (!req.session?.userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
   }
-  return getUserData(userId);
-}
+  return res.json(await getUserData(req.session.userId));
+});
 
 // CORRECT: Environment variables for secrets
-const API_KEY = process.env.STRIPE_SECRET_KEY;
+const API_KEY = process.env.API_SECRET_KEY;
 
-// CORRECT: Parameterized queries
-const user = await prisma.$queryRaw`SELECT * FROM users WHERE id = ${userId}`;
+// CORRECT: Scoped queries with org isolation
+const result = await query(
+  'SELECT * FROM linear_tokens WHERE organization_id = $1',
+  [orgId]
+);
 ```
 
 ## Security Audit Checklist
 
-### 1. RLS Validation
+### 1. Query Safety Validation
 
-- [ ] All database operations use context wrappers
-- [ ] No direct Prisma calls in route handlers
-- [ ] User isolation verified (user A cannot see user B's data)
-- [ ] Admin operations properly scoped
+- [ ] All database operations use parameterized queries ($1, $2, etc.)
+- [ ] No string-interpolated SQL in route handlers
+- [ ] Data isolation verified (org A cannot see org B's data)
+- [ ] All queries scoped by organization_id or session_id
 
 ```bash
-# Find potential RLS bypasses
-grep -r "prisma\." --include="*.ts" app/ lib/ | grep -v "withUserContext\|withAdminContext\|withSystemContext"
+# Find potential SQL injection vulnerabilities
+grep -rn '\${' --include="*.ts" src/ | grep -i 'query\|sql' | grep -v '\$1\|\$2\|\$3'
 ```
 
 ### 2. Authentication Checks
 
-- [ ] All protected routes verify authentication
-- [ ] Clerk auth() called before data access
+- [ ] All protected routes verify authentication (OAuth session)
+- [ ] OAuth session verified before data access
 - [ ] Proper 401/403 responses for unauthorized
 
 ```bash
-# Find routes missing auth checks
-grep -r "export async function" --include="route.ts" app/ | head -20
+# Find Express route handlers
+grep -rn "router\.\(get\|post\|put\|delete\)" --include="*.ts" src/ | head -20
 # Manually verify each has auth check
 ```
 
 ### 3. Credential Scanning
 
 - [ ] No hardcoded secrets in code
-- [ ] No API keys in client-side code
+- [ ] No API keys in source files
 - [ ] Environment variables used correctly
 
 ```bash
 # Scan for potential secrets
-grep -rE "(sk_live|pk_live|password|secret|key)" --include="*.ts" --include="*.tsx" | grep -v "process.env\|.env"
+grep -rE "(sk_live|pk_live|password|secret|key)" --include="*.ts" src/ | grep -v "process.env\|.env\|\.template"
 ```
 
 ### 4. Dependency Vulnerabilities
@@ -111,7 +114,6 @@ grep -rE "(sk_live|pk_live|password|secret|key)" --include="*.ts" --include="*.t
 ```bash
 # Run security audit
 npm audit
-yarn audit
 
 # Check for high/critical vulnerabilities
 npm audit --audit-level=high
@@ -120,33 +122,32 @@ npm audit --audit-level=high
 ### 5. Input Validation
 
 - [ ] User input validated with Zod schemas
-- [ ] No raw query interpolation
-- [ ] File upload restrictions in place
+- [ ] No raw query string interpolation
+- [ ] Webhook signatures verified (HMAC-SHA256)
 
 ## OWASP Top 10 Checklist
 
-| Risk                 | Check                            | Status |
-| -------------------- | -------------------------------- | ------ |
-| A01 Broken Access    | RLS enforced, auth on all routes | ☐      |
-| A02 Crypto Failures  | Secrets in env vars only         | ☐      |
-| A03 Injection        | Parameterized queries, Zod       | ☐      |
-| A04 Insecure Design  | Auth-first pattern followed      | ☐      |
-| A05 Misconfiguration | Prod env properly secured        | ☐      |
-| A06 Vulnerable Deps  | npm audit clean                  | ☐      |
-| A07 Auth Failures    | Clerk integration correct        | ☐      |
-| A08 Data Integrity   | RLS prevents tampering           | ☐      |
-| A09 Logging Failures | Security events logged           | ☐      |
-| A10 SSRF             | External URLs validated          | ☐      |
+| Risk                 | Check                              | Status |
+| -------------------- | ---------------------------------- | ------ |
+| A01 Broken Access    | Data isolation, auth on all routes | ☐      |
+| A02 Crypto Failures  | Secrets in env vars only           | ☐      |
+| A03 Injection        | Parameterized queries, Zod         | ☐      |
+| A04 Insecure Design  | Auth-first pattern followed        | ☐      |
+| A05 Misconfiguration | Prod env properly secured          | ☐      |
+| A06 Vulnerable Deps  | npm audit clean                    | ☐      |
+| A07 Auth Failures    | OAuth integration correct          | ☐      |
+| A08 Data Integrity   | Data isolation prevents tampering  | ☐      |
+| A09 Logging Failures | Security events logged             | ☐      |
+| A10 SSRF             | External URLs validated            | ☐      |
 
 ## Security Validation Commands
 
 ```bash
 # Complete security check
-npm audit && yarn lint && echo "Security checks passed"
+npm audit && npm run lint && echo "Security checks passed"
 
-# RLS bypass detection
-grep -r "prisma\." --include="*.ts" app/ lib/ | wc -l
-# Compare with context wrapper count
+# SQL injection vulnerability detection
+grep -rn '\${' --include="*.ts" src/ | grep -i 'query\|sql'
 
 # Secret detection
 git secrets --scan  # If git-secrets installed
@@ -158,8 +159,8 @@ grep -rE "sk_|pk_|password=" . --include="*.ts"
 Before ANY production deployment:
 
 - [ ] npm audit shows no high/critical issues
-- [ ] RLS policies validated
-- [ ] No new direct Prisma calls
+- [ ] Data isolation validated
+- [ ] No unparameterized queries
 - [ ] Environment variables documented
 - [ ] Backup taken before migration
 - [ ] Rollback plan documented
@@ -182,11 +183,11 @@ Before ANY production deployment:
 | HIGH     | ...   | ...      | FIXED  |
 | MEDIUM   | ...   | ...      | OPEN   |
 
-### RLS Validation
+### Data Isolation Validation
 
-- [x] All tables have RLS enabled
-- [x] User isolation verified
-- [x] Admin policies scoped correctly
+- [x] All queries use parameterized SQL
+- [x] Organization isolation verified
+- [x] Webhook signatures verified
 
 ### Recommendations
 
@@ -202,6 +203,6 @@ Before ANY production deployment:
 ## Authoritative References
 
 - **Security Architecture**: `docs/guides/SECURITY_FIRST_ARCHITECTURE.md`
-- **RLS Implementation**: `docs/database/RLS_IMPLEMENTATION_GUIDE.md`
-- **RLS Policies**: `docs/database/RLS_POLICY_CATALOG.md`
+- **DB Connection**: `src/db/connection.ts` (parameterized query interface)
+- **Webhook Handler**: `src/webhooks/handler.ts` (HMAC-SHA256 verification)
 - **OWASP Top 10**: <https://owasp.org/Top10/>

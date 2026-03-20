@@ -274,4 +274,4 @@ Before publishing any documentation:
 - [ ] Author and date included
 - [ ] No sensitive data (secrets, passwords)
 - [ ] Spell-checked
-- [ ] Markdown lint passes (`yarn lint:md`)
+- [ ] Markdown lint passes (`npm run lint:md`)

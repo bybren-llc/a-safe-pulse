@@ -1,10 +1,10 @@
 ---
 name: api-patterns
 description: >
-  API route implementation patterns with RLS, validation, and error handling.
-  Use when creating API routes, implementing CRUD endpoints, adding server-side
-  validation, handling webhooks, or implementing error handling patterns. Do NOT
-  use for frontend-only changes or database migrations without API involvement.
+  Express API route implementation patterns with validation and error handling.
+  Use when creating Express routes, implementing CRUD endpoints, adding
+  server-side validation, handling webhooks, or implementing error handling.
+  This project uses Express.js with direct pg queries -- no Next.js, no ORM.
 ---
 
 # API Patterns Skill
@@ -13,14 +13,14 @@ description: >
 
 ## Purpose
 
-Route to existing API patterns and provide checklists for safe, validated API route implementation. All API routes MUST use RLS context helpers -- see `rls-patterns` skill.
+Route to existing API patterns and provide checklists for safe, validated Express API route implementation.
 
 ## When This Skill Applies
 
-- Creating new API routes
+- Creating new Express API routes
 - Implementing CRUD endpoints
 - Adding request/response validation
-- Handling webhooks
+- Handling webhooks (Linear, Confluence)
 - Implementing error handling patterns
 
 ## Authoritative References (MUST READ)
@@ -31,73 +31,67 @@ Route to existing API patterns and provide checklists for safe, validated API ro
 | Admin Context API | `patterns_library/api/admin-context-api.md`      | Admin-scoped operations     |
 | Zod Validation    | `patterns_library/api/zod-validation-api.md`     | Request/response validation |
 | Webhook Handler   | `patterns_library/api/webhook-handler.md`        | Webhook processing          |
-| Bonus Content     | `patterns_library/api/bonus-content-delivery.md` | Protected content delivery  |
 
 ## Stop-the-Line Conditions
 
 ### FORBIDDEN Patterns
 
 ```typescript
-// FORBIDDEN: Direct ORM/DB calls (bypass RLS)
-const users = await db.user.findMany();
-// Must use: withUserContext, withAdminContext, or withSystemContext
+// FORBIDDEN: SQL injection via string interpolation
+const result = await query(`SELECT * FROM users WHERE id = '${userId}'`);
 
 // FORBIDDEN: Missing authentication check
-export async function GET(req: Request) {
-  return getUserData(); // No auth check!
-}
+router.get('/api/data', async (req, res) => {
+  return res.json(await getAllData()); // No auth check!
+});
 
 // FORBIDDEN: Unvalidated user input
-const { userId } = await req.json();
-// Must validate with schema validation (Zod, Pydantic, etc.)
+const { userId } = req.body;
+// Must validate with Zod schema
 
 // FORBIDDEN: Generic error responses
-return new Response("Error", { status: 500 });
+res.status(500).send("Error");
 // Must use structured error response
 ```
 
 ### CORRECT Patterns
 
 ```typescript
-// CORRECT: RLS context + auth check
-export async function GET(req: Request) {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+// CORRECT: Parameterized queries
+const result = await query('SELECT * FROM sessions WHERE org_id = $1', [orgId]);
+
+// CORRECT: Auth check + validation
+router.post('/api/resource', async (req: Request, res: Response) => {
+  // 1. Validate input
+  const parsed = RequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({
+      error: 'Validation failed',
+      details: parsed.error.flatten(),
+    });
   }
 
-  const data = await withUserContext(db, userId, async (client) => {
-    return client.user.findUnique({ where: { user_id: userId } });
-  });
-
-  return NextResponse.json(data);
-}
-
-// CORRECT: Schema validation
-const schema = z.object({
-  email: z.string().email(),
-  name: z.string().min(1),
-});
-
-const result = schema.safeParse(body);
-if (!result.success) {
-  return NextResponse.json(
-    { error: "Validation failed", details: result.error.flatten() },
-    { status: 400 },
+  // 2. Execute with parameterized query
+  const result = await query(
+    'INSERT INTO resources (name, org_id) VALUES ($1, $2) RETURNING *',
+    [parsed.data.name, req.params.orgId]
   );
-}
+
+  // 3. Structured response
+  res.status(201).json({ data: result.rows[0], success: true });
+});
 ```
 
 ## API Route Checklist
 
 Before ANY API route:
 
-- [ ] Authentication check
-- [ ] Proper 401 response for unauthenticated
-- [ ] Request validation with schema (Zod, Pydantic, etc.)
-- [ ] RLS context wrapper (`withUserContext`/`withAdminContext`/`withSystemContext`)
+- [ ] Authentication/authorization check (OAuth middleware or session)
+- [ ] Proper 401/403 response for unauthorized
+- [ ] Request validation with Zod schema
+- [ ] Parameterized SQL queries (never interpolate)
 - [ ] Structured error responses with appropriate status codes
-- [ ] Type-safe request/response definitions
+- [ ] TypeScript types for request/response
 
 ## Standard Response Patterns
 
@@ -127,89 +121,54 @@ Before ANY API route:
 | 401  | Not authenticated                            |
 | 403  | Forbidden (authenticated but not authorized) |
 | 404  | Resource not found                           |
+| 429  | Rate limit exceeded                          |
 | 500  | Server error                                 |
 
-## API Route Template
+## Express Route Template
 
 ```typescript
-import { auth } from "{{AUTH_IMPORT}}";
-import { NextResponse } from "next/server";
-import { z } from "zod";
-import { withUserContext } from "{{RLS_IMPORT}}";
-import { db } from "{{DB_IMPORT}}";
+import { Router, Request, Response } from 'express';
+import { z } from 'zod';
+import { query } from '{{DB_CONNECTION_IMPORT}}';
+
+const router = Router();
 
 // Request validation schema
-const RequestSchema = z.object({
-  // Define expected fields
+const CreateResourceSchema = z.object({
+  name: z.string().min(1),
+  type: z.string().optional(),
 });
 
-export async function POST(req: Request) {
+router.post('/api/resource', async (req: Request, res: Response) => {
   try {
-    // 1. Authenticate
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // 1. Validate request body
+    const parsed = CreateResourceSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: parsed.error.flatten(),
+      });
     }
 
-    // 2. Parse and validate request
-    const body = await req.json();
-    const result = RequestSchema.safeParse(body);
-    if (!result.success) {
-      return NextResponse.json(
-        { error: "Validation failed", details: result.error.flatten() },
-        { status: 400 },
-      );
-    }
-
-    // 3. Execute with RLS context
-    const data = await withUserContext(db, userId, async (client) => {
-      return client.resource.create({ data: result.data });
-    });
-
-    // 4. Return success response
-    return NextResponse.json({ data, success: true }, { status: 201 });
-  } catch (error) {
-    console.error("API error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
+    // 2. Execute database operation
+    const result = await query(
+      'INSERT INTO resources (name, type) VALUES ($1, $2) RETURNING *',
+      [parsed.data.name, parsed.data.type]
     );
+
+    // 3. Return success response
+    res.status(201).json({ data: result.rows[0], success: true });
+  } catch (error) {
+    console.error('API error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
-}
-```
+});
 
-## API Documentation Template
-
-For documenting new endpoints:
-
-```markdown
-## Endpoint: POST /api/resource
-
-### Description
-Creates a new resource for the authenticated user.
-
-### Authentication
-Required: {{AUTH_PROVIDER}} session
-
-### Request Body
-| Field | Type   | Required | Description   |
-| ----- | ------ | -------- | ------------- |
-| name  | string | Yes      | Resource name |
-| type  | string | No       | Resource type |
-
-### Response
-**Success (201)**:
-{ "data": { "id": 1, "name": "..." }, "success": true }
-
-**Error (400)**:
-{ "error": "Validation failed", "details": {...} }
-
-### RLS Context
-Uses `withUserContext` - user can only access own resources.
+export default router;
 ```
 
 ## Related Skills
 
-- **rls-patterns**: RLS context helper usage (REQUIRED for all DB operations)
+- **rls-patterns**: Database query patterns (REQUIRED for all DB operations)
 - **security-audit**: API security validation
-- **testing-patterns**: API endpoint testing
+- **testing-patterns**: Express API endpoint testing

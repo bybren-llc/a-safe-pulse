@@ -68,7 +68,7 @@ For each doc needing updates:
 1. Read current version
 2. Identify outdated sections
 3. Update with current information
-4. Run `yarn lint:md:fix`
+4. Run `npx markdownlint-cli2 --fix "**/*.md"`
 5. Add to current commit
 
 ## Workflow

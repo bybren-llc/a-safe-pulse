@@ -36,19 +36,19 @@ Activate this rule when implementing API routes or server-side logic. See `.clau
 
 ALL database operations MUST use RLS context helpers:
 
-- `with_user_context(session, user_id)` -- User operations
-- `with_admin_context(session, user_id)` -- Admin operations
-- `with_system_context(session, 'source')` -- System/webhook operations
+- `withUserContext(client, userId, callback)` -- User operations
+- `withAdminContext(client, userId, callback)` -- Admin operations
+- `withSystemContext(client, 'source', callback)` -- System/webhook operations
 
-Direct ORM calls without context wrappers are forbidden.
+Direct database calls without context wrappers are forbidden.
 
 ## Validation
 
 ```bash
 # Run before committing
-pytest tests/integration/  # Integration tests
-ruff check .               # Linting
-mypy .                     # Type checking
+npm test                  # Jest tests
+npx tsc --noEmit          # TypeScript type checking
+npm run build             # Build verification
 ```
 
 ## Ownership
@@ -62,7 +62,7 @@ mypy .                     # Type checking
 `"Ready for QAS"`
 
 Before handoff:
-- All validation commands pass (tests, lint, type-check)
+- All validation commands pass (tests, type-check, build)
 - All acceptance criteria met
 - All definition of done items complete
 - Evidence captured (command output, test results)

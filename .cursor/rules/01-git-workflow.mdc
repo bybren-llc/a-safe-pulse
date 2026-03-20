@@ -39,12 +39,12 @@ Rules:
 
 ### Scopes (optional)
 
-- `payments`, `auth`, `ui`, `api`, `db`, `scheduler`, `security`, `cursor`
+- `auth`, `api`, `db`, `cli`, `agent`, `webhook`, `sync`, `security`, `cursor`
 
 ### Examples
 
 ```
-feat(payments): add Stripe checkout integration [ASP-42]
+feat(api): add planning session endpoint [ASP-42]
 fix(auth): resolve login redirect issue [ASP-57]
 docs: update API documentation [ASP-123]
 ```

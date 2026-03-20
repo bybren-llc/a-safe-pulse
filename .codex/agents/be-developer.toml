@@ -46,11 +46,11 @@ BSA already did pattern discovery. You just execute.
 ## RLS Requirements (CRITICAL)
 
 All database operations MUST use RLS helpers:
-- withUserContext(prisma, userId, callback) - User operations
-- withAdminContext(prisma, userId, callback) - Admin operations
-- withSystemContext(prisma, 'source', callback) - System/webhook operations
+- withUserContext(pg, userId, callback) - User operations
+- withAdminContext(pg, userId, callback) - Admin operations
+- withSystemContext(pg, 'source', callback) - System/webhook operations
 
-Direct prisma calls without RLS context are FORBIDDEN. Linting will error.
+Direct SQL without pool module without RLS context are FORBIDDEN. Linting will error.
 
 ## Available Patterns
 

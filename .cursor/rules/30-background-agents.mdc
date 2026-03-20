@@ -69,6 +69,6 @@ Run as a background agent:
 - Act as the BE Developer (see .claude/agents/be-developer.md)
 - Implement ASP-42 per specs/ASP-42-user-api-spec.md
 - Follow patterns from patterns_library/api/user-context-api.md
-- Run: pytest tests/integration/ && ruff check . && mypy .
+- Run: npm test && npx tsc --noEmit && npm run build
 - Open a PR when all checks pass
 ```

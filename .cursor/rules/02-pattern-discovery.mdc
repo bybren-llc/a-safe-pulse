@@ -30,8 +30,8 @@ Check `patterns_library/` for an existing pattern that fits your use case.
 |------------|-----------------------------|-------------------------------------|
 | API        | `patterns_library/api/`     | User context, admin, webhooks, Zod  |
 | UI         | `patterns_library/ui/`      | Authenticated pages, forms, tables  |
-| Database   | `patterns_library/database/`| RLS migration, Prisma transactions  |
-| Testing    | `patterns_library/testing/` | API integration, E2E user flows     |
+| Database   | `patterns_library/database/`| RLS migration, SQL transactions     |
+| Testing    | `patterns_library/testing/` | API integration tests               |
 | Security   | `patterns_library/security/`| Input sanitization, rate limiting   |
 | CI         | `patterns_library/ci/`      | GitHub Actions, deployment pipeline |
 | Config     | `patterns_library/config/`  | Environment config, logging         |

@@ -26,7 +26,7 @@ The BSA is responsible for requirements decomposition, acceptance criteria defin
 
 ```bash
 # Verify documentation quality
-yarn lint:md && echo "BSA SUCCESS" || echo "BSA FAILED"
+npx tsc --noEmit:md && echo "BSA SUCCESS" || echo "BSA FAILED"
 
 # Verify Linear ticket completeness (manual check)
 # - User story format correct
@@ -321,7 +321,7 @@ cat specs/ASP-XXX-similar-spec.md
 - How it fits into existing a-safe-pulse architecture
 - Components affected
 - Architectural decisions needed
-- Tech stack considerations (Next.js, PostgreSQL, Prisma, Clerk, Stripe, PostHog)
+- Tech stack considerations (Node.js, Express, TypeScript, PostgreSQL, SQLite, Jest, OAuth 2.0)
 
 **Dependencies**:
 
@@ -400,13 +400,13 @@ From spec, add subtasks to ASP-XXX:
 
 ```bash
 # Build and test
-yarn lint && yarn type-check && yarn build
+npx tsc --noEmit && npx tsc --noEmit && npm run build
 
 # Run tests
-yarn test:unit && yarn test:integration
+npm test && npm test
 
 # Demo the feature
-yarn dev
+npm run dev
 # Navigate to feature
 # Verify acceptance criteria
 
@@ -496,7 +496,7 @@ So that [business value]
 
 # Command to validate success
 
-yarn test:integration && echo "SUCCESS" || echo "FAILED"
+npm test && echo "SUCCESS" || echo "FAILED"
 \`\`\`
 ```
 
@@ -566,7 +566,7 @@ yarn test:integration && echo "SUCCESS" || echo "FAILED"
 ### Validation Results
 
 \`\`\`bash
-yarn lint:md
+npx tsc --noEmit:md
 
 # [Output]
 

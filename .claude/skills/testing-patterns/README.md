@@ -3,12 +3,12 @@
 ![Status](https://img.shields.io/badge/status-production-green)
 ![Harness](https://img.shields.io/badge/harness-v2.10.0-blue)
 
-> Testing patterns for Jest and Playwright. Routes to existing test conventions and provides evidence templates.
+> Testing patterns for Jest unit and integration tests. Tests in `tests/` directory.
 
 ## License
 
 **License:** MIT (see [/LICENSE](/LICENSE))
-**Copyright:** © 2026 J. Scott Graham ([@cheddarfox](https://github.com/cheddarfox)) / [ByBren, LLC](https://github.com/bybren-llc)
+**Copyright:** (c) 2026 J. Scott Graham ([@cheddarfox](https://github.com/cheddarfox)) / [ByBren, LLC](https://github.com/bybren-llc)
 **Attribution:** Required per [/NOTICE](/NOTICE)
 
 ## Intellectual Property
@@ -19,33 +19,33 @@ The skill system architecture and ASP harness methodology are the intellectual p
 
 This skill activates automatically when you:
 - Write new unit or integration tests
-- Set up test fixtures with RLS
+- Set up test fixtures
 - Run test suites
 - Package test evidence for Linear
 
 ## What This Skill Does
 
-Guides consistent and effective testing using Jest for unit/integration tests and Playwright for E2E tests. Provides proper test directory structure and evidence templates for Linear tickets.
+Guides consistent and effective testing using Jest for unit and integration tests. Provides proper test directory structure, coverage thresholds (70% branches, 80% functions/lines/statements), and evidence templates for Linear tickets.
 
 ## Trigger Keywords
 
 | Primary | Secondary |
 |---------|-----------|
 | test | jest |
-| playwright | coverage |
-| unit test | integration |
-| fixture | mock |
+| coverage | unit test |
+| integration | fixture |
+| mock | assertion |
 
 ## Related Skills
 
-- [api-patterns](../api-patterns/) - API route testing patterns
+- [api-patterns](../api-patterns/) - Express API route testing patterns
 - [spec-creation](../spec-creation/) - Acceptance criteria to test
 
 ## Maintenance
 
 | Field | Value |
 |-------|-------|
-| Last Updated | 2026-01-04 |
+| Last Updated | 2026-03-19 |
 | Harness Version | v2.10.0 |
 
 ---

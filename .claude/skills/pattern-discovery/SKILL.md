@@ -47,8 +47,8 @@ Check `patterns_library/README.md` for the complete pattern index:
 | -------- | --------------------------------------------------------------------------- |
 | API      | User Context, Admin Context, Webhook Handler, Zod Validation, Bonus Content |
 | UI       | Authenticated Page, Form with Validation, Data Table, Marketing Page        |
-| Database | RLS Migration, Prisma Transaction, Server Component Access                  |
-| Testing  | API Integration Test, E2E User Flow                                         |
+| Database | RLS Migration, SQL Transaction                                               |
+| Testing  | API Integration Test, Jest Patterns                                          |
 | Security | Input Sanitization, Rate Limiting, Secrets Management                       |
 | CI       | GitHub Actions Workflow, Deployment Pipeline                                |
 | Config   | Environment Config, Structured Logging                                      |
@@ -87,11 +87,11 @@ patterns_library/
 │   └── marketing-page.md
 ├── database/
 │   ├── rls-migration.md
-│   ├── prisma-transaction.md
-│   └── server-component-direct-access.md
+│   ├── sql-transaction.md
+│   └── connection-patterns.md
 ├── testing/
 │   ├── api-integration-test.md
-│   └── e2e-user-flow.md
+│   └── jest-patterns.md
 ├── security/
 │   ├── input-sanitization.md
 │   ├── rate-limiting.md
@@ -118,9 +118,9 @@ patterns_library/
 | Display paginated data             | `ui/data-table.md`                |
 | Create marketing/landing page      | `ui/marketing-page.md`            |
 | Add new table with RLS             | `database/rls-migration.md`       |
-| Run multi-step DB operations       | `database/prisma-transaction.md`  |
+| Run multi-step DB operations       | `database/sql-transaction.md`  |
 | Test API endpoints                 | `testing/api-integration-test.md` |
-| Write E2E user flow tests          | `testing/e2e-user-flow.md`        |
+| Write E2E user flow tests          | `testing/jest-patterns.md`        |
 | Sanitize user input                | `security/input-sanitization.md`  |
 | Add API rate limiting              | `security/rate-limiting.md`       |
 | Manage secrets/env vars            | `security/secrets-management.md`  |
@@ -143,9 +143,9 @@ All patterns enforce:
 After applying a pattern, run:
 
 ```bash
-yarn lint && yarn type-check  # All patterns
-yarn test:integration         # API patterns
-yarn test:e2e                 # UI patterns
+npm run lint && npm run build  # All patterns
+npm test         # API patterns
+
 ```
 
 ## Authoritative Reference

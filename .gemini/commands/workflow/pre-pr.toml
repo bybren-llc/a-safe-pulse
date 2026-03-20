@@ -12,7 +12,7 @@ You are preparing to create a Pull Request. Execute the MANDATORY validation wor
 Run CI validation suite:
 
 ```bash
-!{yarn ci:validate 2>&1 || echo "CI validation completed with issues"}
+!{npm test && npm run build 2>&1 || echo "CI validation completed with issues"}
 ```
 
 This runs:
@@ -28,13 +28,13 @@ This runs:
 Auto-fix markdown formatting:
 
 ```bash
-!{yarn lint:md:fix 2>&1 || echo "Markdown linting completed"}
+!{npx markdownlint-cli2 --fix "**/*.md" 2>&1 || echo "Markdown linting completed"}
 ```
 
 Verify no errors remain:
 
 ```bash
-!{yarn lint:md 2>&1 || echo "Markdown check completed"}
+!{npx markdownlint-cli2 "**/*.md" 2>&1 || echo "Markdown check completed"}
 ```
 
 ### 3. Git Status Check

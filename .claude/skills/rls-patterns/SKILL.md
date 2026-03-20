@@ -1,6 +1,6 @@
 ---
 name: rls-patterns
-description: Row Level Security patterns for database operations. Use when writing Prisma/database code, creating API routes that access data, or implementing webhooks. Enforces withUserContext, withAdminContext, or withSystemContext helpers. NEVER use direct prisma calls.
+description: Row Level Security patterns for database operations. Use when writing database queries, creating Express API routes that access data, or implementing webhooks. This project uses direct pg (node-postgres) queries with raw SQL -- no ORM.
 user-invocable: false
 allowed-tools: Read, Grep, Glob
 ---
@@ -11,209 +11,300 @@ allowed-tools: Read, Grep, Glob
 
 Enforce Row Level Security (RLS) patterns for all database operations. This skill ensures data isolation and prevents cross-user data access at the database level.
 
+## Current Tech Stack
+
+- **Database**: PostgreSQL (production) via `pg` (node-postgres) -- direct SQL queries
+- **Dev Database**: SQLite via `SQLITE_DB_PATH` for local development
+- **Connection**: `src/db/connection.ts` exports `query()` and `getClient()`
+- **Migrations**: Raw SQL files in `src/db/migrations/` (auto-run on startup)
+- **No ORM**: Direct SQL queries only (no ORM)
+- **Server**: Express.js with OAuth 2.0 (Linear + Confluence)
+
 ## When This Skill Applies
 
 Invoke this skill when:
 
-- Writing any Prisma database query
-- Creating or modifying API routes that access the database
+- Writing any database query (raw SQL via `query()` or `getClient()`)
+- Creating or modifying Express API routes that access the database
 - Implementing webhook handlers that write to the database
-- Working with user data, payments, subscriptions, or enrollments
-- Accessing admin-only tables (disputes, webhook_events)
+- Working with user data, tokens, planning sessions, or sync state
+- Accessing organization-scoped tables
 
 ## Critical Rules
 
 ### NEVER Do This
 
 ```typescript
-// ❌ FORBIDDEN - Direct Prisma calls bypass RLS
-const user = await prisma.user.findUnique({ where: { user_id } });
+// FORBIDDEN - String interpolation is SQL injection risk
+const result = await query(`SELECT * FROM linear_tokens WHERE org_id = '${orgId}'`);
 
-// ❌ FORBIDDEN - No context set
-const payments = await prisma.payments.findMany();
+// FORBIDDEN - Unscoped queries expose all rows
+const tokens = await query('SELECT * FROM linear_tokens');
+
+// FORBIDDEN - Missing error handling on transactions
+const client = await getClient();
+await client.query('BEGIN');
+await client.query('INSERT INTO ...');
+await client.query('COMMIT');
+// Missing: try/catch/finally, ROLLBACK, client.release()
 ```
-
-**ESLint will block direct Prisma calls.** See `eslint.config.mjs` for enforcement rules.
 
 ### ALWAYS Do This
 
 ```typescript
-import {
-  withUserContext,
-  withAdminContext,
-  withSystemContext,
-} from "@/lib/rls-context";
+import { query, getClient } from '../db/connection';
 
-// ✅ CORRECT - User context for user operations
-const user = await withUserContext(prisma, userId, async (client) => {
-  return client.user.findUnique({ where: { user_id: userId } });
-});
+// CORRECT - Parameterized queries prevent SQL injection
+const result = await query(
+  'SELECT * FROM linear_tokens WHERE organization_id = $1',
+  [orgId]
+);
 
-// ✅ CORRECT - Admin context for admin operations
-const webhooks = await withAdminContext(prisma, userId, async (client) => {
-  return client.webhook_events.findMany();
-});
-
-// ✅ CORRECT - System context for webhooks/background tasks
-const event = await withSystemContext(prisma, "webhook", async (client) => {
-  return client.webhook_events.create({ data: eventData });
-});
-```
-
-## Context Helper Reference
-
-### `withUserContext(prisma, userId, callback)`
-
-**Use for**: All user-facing operations
-
-- User profile access
-- Payment history
-- Subscription management
-- Course enrollments
-
-```typescript
-const payments = await withUserContext(prisma, userId, async (client) => {
-  return client.payments.findMany({ where: { user_id: userId } });
-});
-```
-
-### `withAdminContext(prisma, userId, callback)`
-
-**Use for**: Admin-only operations (requires admin role in `user_roles` table)
-
-- Viewing all webhook events
-- Managing disputes
-- Accessing payment failures
-
-```typescript
-const disputes = await withAdminContext(prisma, adminUserId, async (client) => {
-  return client.disputes.findMany();
-});
-```
-
-### `withSystemContext(prisma, contextType, callback)`
-
-**Use for**: Webhooks and background jobs
-
-- Stripe webhook handlers
-- Clerk webhook handlers
-- Background job processing
-
-```typescript
-// Stripe webhook handler
-await withSystemContext(prisma, "webhook", async (client) => {
-  await client.payments.create({ data: paymentData });
-});
-```
-
-## Admin Pages: Force Dynamic Rendering
-
-**CRITICAL**: Admin pages using RLS queries MUST force runtime rendering:
-
-```typescript
-// app/admin/some-page/page.tsx
-import { withAdminContext } from "@/lib/rls-context";
-import { prisma } from "@/lib/prisma";
-
-// REQUIRED - RLS context unavailable at build time
-export const dynamic = "force-dynamic";
-
-async function getAdminData() {
-  return await withAdminContext(prisma, userId, async (client) => {
-    return client.someTable.findMany();
-  });
+// CORRECT - Transactions with proper error handling
+const client = await getClient();
+try {
+  await client.query('BEGIN');
+  await client.query(
+    'INSERT INTO planning_sessions (id, org_id, status) VALUES ($1, $2, $3)',
+    [sessionId, orgId, 'active']
+  );
+  await client.query('COMMIT');
+} catch (error) {
+  await client.query('ROLLBACK');
+  throw error;
+} finally {
+  client.release();
 }
 ```
 
-Without `export const dynamic = 'force-dynamic'`, Next.js will try to pre-render at build time, causing "permission denied" errors.
+## RLS Architecture: Current State and Target
+
+### Current State
+
+a-safe-pulse currently uses **application-level data isolation** -- queries filter by `organization_id` or session ownership in SQL WHERE clauses. The `query()` and `getClient()` helpers in `src/db/connection.ts` provide the database access layer.
+
+### Target Architecture (When PostgreSQL RLS Is Added)
+
+When PostgreSQL RLS policies are introduced:
+
+1. **Session variables** will set user/org context: `SET app.current_user_id = '...'`
+2. **RLS policies** on tables will enforce row-level filtering automatically
+3. **Application roles** will have restricted GRANT permissions
+4. **Context helpers** will wrap queries to set session variables before execution
+
+### When to Use Raw SQL Safely
+
+**Always** use parameterized queries (`$1`, `$2`, etc.) -- never interpolate values into SQL strings. The `query()` function in `src/db/connection.ts` accepts parameters as the second argument.
+
+```typescript
+// SAFE: Parameterized
+const result = await query('SELECT * FROM users WHERE id = $1', [userId]);
+
+// UNSAFE: Interpolated -- NEVER DO THIS
+const result = await query(`SELECT * FROM users WHERE id = '${userId}'`);
+```
+
+## Database Access Patterns
+
+### Simple Query
+
+```typescript
+import { query } from '../db/connection';
+
+// Parameterized read with org isolation
+const result = await query(
+  'SELECT * FROM planning_sessions WHERE id = $1 AND org_id = $2',
+  [sessionId, orgId]
+);
+const session = result.rows[0];
+```
+
+### Transaction Pattern
+
+```typescript
+import { getClient } from '../db/connection';
+
+const client = await getClient();
+try {
+  await client.query('BEGIN');
+
+  const sessionResult = await client.query(
+    'INSERT INTO planning_sessions (id, org_id) VALUES ($1, $2) RETURNING *',
+    [sessionId, orgId]
+  );
+
+  await client.query(
+    'INSERT INTO planning_features (session_id, title) VALUES ($1, $2)',
+    [sessionId, featureTitle]
+  );
+
+  await client.query('COMMIT');
+  return sessionResult.rows[0];
+} catch (error) {
+  await client.query('ROLLBACK');
+  throw error;
+} finally {
+  client.release();
+}
+```
+
+### Upsert Pattern (ON CONFLICT)
+
+```typescript
+await query(
+  `INSERT INTO sync_state (entity_type, entity_id, last_synced)
+   VALUES ($1, $2, NOW())
+   ON CONFLICT (entity_type, entity_id)
+   DO UPDATE SET last_synced = NOW()`,
+  [entityType, entityId]
+);
+```
 
 ## Protected Tables
 
-### User Data Tables (User Isolation)
+### Token/Auth Tables
 
-| Table               | Policy Type    | Access                 |
-| ------------------- | -------------- | ---------------------- |
-| `user`              | User isolation | Own data only          |
-| `payments`          | User isolation | Own payments only      |
-| `subscriptions`     | User isolation | Own subscriptions only |
-| `invoices`          | User isolation | Own invoices only      |
-| `course_enrollment` | User isolation | Own enrollments only   |
+| Table               | Isolation Key      | Access Pattern           |
+| ------------------- | ------------------ | ------------------------ |
+| `linear_tokens`     | `organization_id`  | Filter by org            |
+| `confluence_tokens` | `organization_id`  | Filter by org            |
 
-### Admin/System Tables (Role-Based)
+### Planning Tables
 
-| Table                 | Policy Type  | Access                   |
-| --------------------- | ------------ | ------------------------ |
-| `webhook_events`      | Admin+System | Admins and webhooks only |
-| `disputes`            | Admin only   | Admins only              |
-| `payment_failures`    | Admin only   | Admins only              |
-| `trial_notifications` | Admin+System | Admins and system only   |
+| Table               | Isolation Key      | Access Pattern              |
+| ------------------- | ------------------ | --------------------------- |
+| `planning_sessions` | `org_id`           | Filter by org               |
+| `planning_features` | `session_id`       | Filter by parent session    |
+| `planning_stories`  | `session_id`       | Filter by parent session    |
+| `planning_enablers` | `session_id`       | Filter by parent session    |
+| `program_increments`| `organization_id`  | Filter by org               |
 
-## Testing Requirements
+## Express Middleware Patterns
 
-Always test with `{{PROJECT}}_app_user` role (not `{{PROJECT}}_user` superuser):
+### Organization Access Middleware
 
-```bash
-# Basic RLS functionality test
-node scripts/test-rls-phase3-simple.js
+```typescript
+import { Request, Response, NextFunction } from 'express';
 
-# Comprehensive security validation
-cat scripts/rls-phase4-final-validation.sql | \
-  docker exec -i a-safe-pulse-postgres-1 psql -U {{PROJECT}}_app_user -d {{PROJECT}}_dev
+function requireOrgAccess(req: Request, res: Response, next: NextFunction) {
+  const orgId = req.params.orgId || req.query.orgId;
+  if (!orgId) {
+    return res.status(400).json({ error: 'Organization ID required' });
+  }
+  (req as any).orgId = orgId;
+  next();
+}
+```
+
+### Webhook Signature Verification
+
+```typescript
+import crypto from 'crypto';
+
+function verifyWebhookSignature(req: Request, res: Response, next: NextFunction) {
+  const signature = req.headers['x-signature'] as string;
+  const timestamp = req.headers['x-timestamp'] as string;
+
+  if (!signature || !timestamp) {
+    return res.status(401).json({ error: 'Missing signature' });
+  }
+
+  const payload = `${timestamp}:${JSON.stringify(req.body)}`;
+  const expected = crypto
+    .createHmac('sha256', process.env.WEBHOOK_SECRET!)
+    .update(payload)
+    .digest('hex');
+
+  if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
+    return res.status(401).json({ error: 'Invalid signature' });
+  }
+
+  next();
+}
 ```
 
 ## Common Patterns
 
-### API Route with User Context
+### Express Route with Data Isolation
 
 ```typescript
-// app/api/user/payments/route.ts
-import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth";
-import { withUserContext } from "@/lib/rls-context";
-import { prisma } from "@/lib/prisma";
+import { Router, Request, Response } from 'express';
+import { query } from '../db/connection';
 
-export async function GET() {
-  const { userId } = await requireAuth();
+const router = Router();
 
-  const payments = await withUserContext(prisma, userId, async (client) => {
-    return client.payments.findMany({
-      where: { user_id: userId },
-      orderBy: { created_at: "desc" },
-    });
-  });
+router.get('/api/planning/:orgId/sessions', async (req: Request, res: Response) => {
+  try {
+    const { orgId } = req.params;
 
-  return NextResponse.json(payments);
+    const result = await query(
+      'SELECT * FROM planning_sessions WHERE org_id = $1 ORDER BY created_at DESC',
+      [orgId]
+    );
+
+    res.json({ data: result.rows });
+  } catch (error) {
+    console.error('Error fetching sessions:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+export default router;
+```
+
+### Webhook Handler with Transaction
+
+```typescript
+import { getClient } from '../db/connection';
+
+async function handleWebhookEvent(event: WebhookEvent): Promise<void> {
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+
+    // Idempotent: skip if already processed
+    const existing = await client.query(
+      'SELECT id FROM webhook_events WHERE event_id = $1',
+      [event.id]
+    );
+    if (existing.rows.length > 0) {
+      await client.query('ROLLBACK');
+      return;
+    }
+
+    await client.query(
+      `INSERT INTO webhook_events (event_id, event_type, payload, processed_at)
+       VALUES ($1, $2, $3, NOW())`,
+      [event.id, event.type, JSON.stringify(event.data)]
+    );
+
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 ```
 
-### Webhook Handler with System Context
+## Testing Requirements
 
-```typescript
-// app/api/webhooks/stripe/route.ts
-import { withSystemContext } from "@/lib/rls-context";
-import { prisma } from "@/lib/prisma";
+Always test with parameterized queries and verify data isolation:
 
-export async function POST(req: Request) {
-  // Verify webhook signature first...
+```bash
+# Run all tests
+npm test
 
-  await withSystemContext(prisma, "webhook", async (client) => {
-    await client.webhook_events.create({
-      data: {
-        event_type: event.type,
-        payload: event.data,
-        processed_at: new Date(),
-      },
-    });
-  });
-
-  return new Response("OK", { status: 200 });
-}
+# Run with coverage
+npm test -- --coverage
 ```
 
 ## Authoritative References
 
-- **Implementation Guide**: `docs/database/RLS_IMPLEMENTATION_GUIDE.md`
-- **Policy Catalog**: `docs/database/RLS_POLICY_CATALOG.md`
-- **Migration SOP**: `docs/database/RLS_DATABASE_MIGRATION_SOP.md`
-- **ESLint Rules**: `eslint.config.mjs` (direct Prisma call enforcement)
-- **RLS Context**: `lib/rls-context.ts`
+- **DB Connection**: `src/db/connection.ts` (query + getClient exports)
+- **Migrations**: `src/db/migrations/` (raw SQL files, `XXX_description.sql`)
+- **Migration Runner**: `src/db/migrations/index.ts` (auto-run on startup)
+- **Auth Module**: `src/auth/` (OAuth 2.0 for Linear + Confluence)
+- **Webhook Handler**: `src/webhooks/handler.ts` (HMAC-SHA256 verification)
+- **Security Guide**: `docs/guides/SECURITY_FIRST_ARCHITECTURE.md`
