@@ -2,7 +2,7 @@
 
 ## What It Does
 
-Creates type-safe API routes with comprehensive input validation using Zod schemas. Provides automatic validation, type inference, and helpful error messages.
+Creates type-safe Express API routes with comprehensive input validation using Zod schemas. Provides automatic validation, type inference, and helpful error messages for both request bodies and query parameters.
 
 ## When to Use
 
@@ -15,12 +15,12 @@ Creates type-safe API routes with comprehensive input validation using Zod schem
 ## Code Pattern
 
 ```typescript
-// app/api/{resource}/route.ts
-import { NextRequest, NextResponse } from 'next/server';
+// src/routes/{resource}.ts
+import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { auth } from '@clerk/nextjs/server';
-import { withUserContext } from '@/lib/rls-context';
-import { prisma } from '@/lib/prisma';
+import { Pool } from 'pg';
+
+const router = Router();
 
 // 1. Define Zod schemas for validation
 const CreateResourceSchema = z.object({
@@ -70,18 +70,6 @@ const CreateResourceSchema = z.object({
     .datetime('Invalid datetime format')
     .transform((str) => new Date(str)),
 
-  // Conditional validation
-  tier: z.enum(['FREE', 'PRO', 'VIP']),
-  proFeatures: z.array(z.string())
-    .optional()
-    .refine(
-      (features) => {
-        // Only PRO/VIP can have features
-        return features === undefined || features.length === 0;
-      },
-      { message: 'Free tier cannot have features' }
-    ),
-
   // Custom validation
   password: z.string()
     .min(8, 'Password must be at least 8 characters')
@@ -100,199 +88,182 @@ const QuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
   sort: z.enum(['asc', 'desc']).default('desc'),
   filter: z.string().optional(),
-  tier: z.enum(['FREE', 'PRO', 'VIP', 'ALL']).default('ALL')
+  status: z.enum(['active', 'inactive', 'ALL']).default('ALL')
 });
 
 /**
  * POST /api/{resource} - Create with validation
  */
-export async function POST(request: NextRequest) {
+router.post('/', async (req: Request, res: Response) => {
   try {
-    const { userId } = await auth();
+    const userId = (req as any).user?.id;
 
     if (!userId) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
-    // Parse and validate request body
-    const body = await request.json();
-
     // Validate with Zod (throws ZodError if invalid)
-    const validated = CreateResourceSchema.parse(body);
+    const validated = CreateResourceSchema.parse(req.body);
 
     // At this point, `validated` is fully type-safe!
     // TypeScript knows exact types: validated.name is string, etc.
 
-    // Create resource with validated data
-    const created = await withUserContext(prisma, userId, async (client) => {
-      return client.{table_name}.create({
-        data: {
-          ...validated,
-          user_id: userId
-        }
-      });
-    });
-
-    return NextResponse.json(
-      { data: created },
-      { status: 201 }
+    // Create resource with parameterized SQL
+    const pool: Pool = req.app.get('db');
+    const result = await pool.query(
+      `INSERT INTO {table_name} (name, email, organization_id, created_at, updated_at)
+       VALUES ($1, $2, $3, NOW(), NOW())
+       RETURNING *`,
+      [validated.name, validated.email, userId]
     );
 
+    return res.status(201).json({ data: result.rows[0] });
   } catch (error) {
     // Handle Zod validation errors
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        {
-          error: 'Validation failed',
-          details: error.errors.map(err => ({
-            field: err.path.join('.'),
-            message: err.message
-          }))
-        },
-        { status: 400 }
-      );
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: error.errors.map(err => ({
+          field: err.path.join('.'),
+          message: err.message
+        }))
+      });
     }
 
     console.error('Error creating {resource}:', error);
-    return NextResponse.json(
-      { error: 'Failed to create {resource}' },
-      { status: 500 }
-    );
+    return res.status(500).json({ error: 'Failed to create {resource}' });
   }
-}
+});
 
 /**
  * GET /api/{resource} - List with query validation
  */
-export async function GET(request: NextRequest) {
+router.get('/', async (req: Request, res: Response) => {
   try {
-    const { userId } = await auth();
+    const userId = (req as any).user?.id;
 
     if (!userId) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     // Validate query parameters
-    const { searchParams } = new URL(request.url);
     const query = QuerySchema.parse({
-      page: searchParams.get('page'),
-      limit: searchParams.get('limit'),
-      sort: searchParams.get('sort'),
-      filter: searchParams.get('filter'),
-      tier: searchParams.get('tier')
+      page: req.query.page,
+      limit: req.query.limit,
+      sort: req.query.sort,
+      filter: req.query.filter,
+      status: req.query.status
     });
 
     // Calculate pagination
-    const skip = (query.page - 1) * query.limit;
+    const offset = (query.page - 1) * query.limit;
 
-    // Query with validated params
-    const data = await withUserContext(prisma, userId, async (client) => {
-      const whereClause: any = { user_id: userId };
+    // Build dynamic query with parameterized SQL
+    const pool: Pool = req.app.get('db');
+    const conditions: string[] = ['organization_id = $1'];
+    const params: any[] = [userId];
+    let paramIndex = 2;
 
-      if (query.filter) {
-        whereClause.OR = [
-          { name: { contains: query.filter, mode: 'insensitive' } },
-          { description: { contains: query.filter, mode: 'insensitive' } }
-        ];
-      }
+    if (query.filter) {
+      conditions.push(`(name ILIKE $${paramIndex} OR description ILIKE $${paramIndex})`);
+      params.push(`%${query.filter}%`);
+      paramIndex++;
+    }
 
-      if (query.tier !== 'ALL') {
-        whereClause.tier = query.tier;
-      }
+    if (query.status !== 'ALL') {
+      conditions.push(`status = $${paramIndex}`);
+      params.push(query.status);
+      paramIndex++;
+    }
 
-      return client.{table_name}.findMany({
-        where: whereClause,
-        take: query.limit,
-        skip,
-        orderBy: { created_at: query.sort }
-      });
-    });
+    params.push(query.limit, offset);
 
-    return NextResponse.json({
-      data,
+    const sortDirection = query.sort === 'asc' ? 'ASC' : 'DESC';
+    const result = await pool.query(
+      `SELECT * FROM {table_name}
+       WHERE ${conditions.join(' AND ')}
+       ORDER BY created_at ${sortDirection}
+       LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
+      params
+    );
+
+    return res.json({
+      data: result.rows,
       pagination: {
         page: query.page,
         limit: query.limit,
-        total: data.length
+        total: result.rows.length
       }
     });
-
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        {
-          error: 'Invalid query parameters',
-          details: error.errors
-        },
-        { status: 400 }
-      );
+      return res.status(400).json({
+        error: 'Invalid query parameters',
+        details: error.errors
+      });
     }
 
-    return NextResponse.json(
-      { error: 'Failed to fetch {resource}' },
-      { status: 500 }
-    );
+    return res.status(500).json({ error: 'Failed to fetch {resource}' });
   }
-}
+});
 
 /**
- * PUT /api/{resource}/[id] - Update with partial validation
+ * PUT /api/{resource}/:id - Update with partial validation
  */
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+router.put('/:id', async (req: Request, res: Response) => {
   try {
-    const { userId } = await auth();
+    const userId = (req as any).user?.id;
 
     if (!userId) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const body = await request.json();
+    const { id } = req.params;
 
     // Partial schema - all fields optional for updates
     const UpdateSchema = CreateResourceSchema.partial();
-    const validated = UpdateSchema.parse(body);
+    const validated = UpdateSchema.parse(req.body);
 
-    const updated = await withUserContext(prisma, userId, async (client) => {
-      return client.{table_name}.update({
-        where: {
-          id: params.id,
-          user_id: userId  // Ensure ownership
-        },
-        data: validated
-      });
-    });
+    // Build dynamic UPDATE with parameterized SQL
+    const pool: Pool = req.app.get('db');
+    const setClauses: string[] = [];
+    const params: any[] = [];
+    let paramIndex = 1;
 
-    return NextResponse.json({ data: updated });
-
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        {
-          error: 'Validation failed',
-          details: error.errors
-        },
-        { status: 400 }
-      );
+    for (const [key, value] of Object.entries(validated)) {
+      setClauses.push(`${key} = $${paramIndex++}`);
+      params.push(value);
     }
 
-    return NextResponse.json(
-      { error: 'Failed to update {resource}' },
-      { status: 500 }
+    setClauses.push('updated_at = NOW()');
+    params.push(id, userId);
+
+    const result = await pool.query(
+      `UPDATE {table_name}
+       SET ${setClauses.join(', ')}
+       WHERE id = $${paramIndex++} AND organization_id = $${paramIndex}
+       RETURNING *`,
+      params
     );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: '{Resource} not found' });
+    }
+
+    return res.json({ data: result.rows[0] });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: error.errors
+      });
+    }
+
+    return res.status(500).json({ error: 'Failed to update {resource}' });
   }
-}
+});
+
+export default router;
 ```
 
 ## Advanced Zod Patterns
@@ -302,21 +273,21 @@ export async function PUT(
 ```typescript
 const ConditionalSchema = z
   .object({
-    userType: z.enum(["individual", "business"]),
+    userType: z.enum(['individual', 'business']),
     // Conditionally require business fields
     businessName: z.string().optional(),
     taxId: z.string().optional(),
   })
   .refine(
     (data) => {
-      if (data.userType === "business") {
+      if (data.userType === 'business') {
         return data.businessName && data.taxId;
       }
       return true;
     },
     {
-      message: "Business name and tax ID required for business accounts",
-      path: ["businessName"],
+      message: 'Business name and tax ID required for business accounts',
+      path: ['businessName'],
     },
   );
 ```
@@ -332,7 +303,7 @@ const TransformSchema = z.object({
 
   tags: z
     .string()
-    .transform((val) => val.split(",").map((t) => t.trim()))
+    .transform((val) => val.split(',').map((t) => t.trim()))
     .pipe(z.array(z.string().min(1))),
 });
 ```
@@ -340,14 +311,14 @@ const TransformSchema = z.object({
 ### Union Types
 
 ```typescript
-const PaymentMethodSchema = z.discriminatedUnion("type", [
+const PaymentMethodSchema = z.discriminatedUnion('type', [
   z.object({
-    type: z.literal("card"),
+    type: z.literal('card'),
     cardNumber: z.string().length(16),
     cvv: z.string().length(3),
   }),
   z.object({
-    type: z.literal("bank"),
+    type: z.literal('bank'),
     accountNumber: z.string(),
     routingNumber: z.string(),
   }),
@@ -357,8 +328,8 @@ const PaymentMethodSchema = z.discriminatedUnion("type", [
 ## Customization Guide
 
 1. **Replace placeholders**:
-   - `{resource}` → Your resource name
-   - `{table_name}` → Prisma model name
+   - `{resource}` -- Your resource name
+   - `{table_name}` -- PostgreSQL table name
 
 2. **Define your schemas**:
    - Add fields specific to your data
@@ -373,79 +344,77 @@ const PaymentMethodSchema = z.discriminatedUnion("type", [
 4. **Type safety**:
    - Use `z.infer<>` for TypeScript types
    - Let Zod handle runtime validation
-   - Enjoy auto-complete!
 
 ## Security Checklist
 
 - [x] **Input Validation**: All inputs validated with Zod
 - [x] **Type Safety**: TypeScript types inferred from schemas
 - [x] **Error Messages**: Clear, helpful validation errors
-- [x] **No SQL Injection**: Parameterized queries via Prisma
+- [x] **Parameterized SQL**: No string concatenation in queries
 - [x] **XSS Prevention**: Sanitize string inputs if needed
 
 ## Validation Commands
 
 ```bash
 # Type checking (will catch Zod type errors)
-yarn type-check
+npm run build
 
-# Linting
-yarn lint
+# Run tests
+npm test
 
-# Unit tests for schemas
-yarn test:unit
-
-# Integration tests
-yarn test:integration
+# Full validation
+npm test && npm run build && echo "BE SUCCESS" || echo "BE FAILED"
 ```
 
-## Example: User Registration API
+## Example: Planning Session Validation
 
 ```typescript
-import { z } from "zod";
+import { z } from 'zod';
 
-const RegisterSchema = z
+const PlanningSessionSchema = z
   .object({
-    email: z.string().email(),
-    password: z.string().min(8),
-    confirmPassword: z.string(),
-    tier: z.enum(["FREE", "PRO"]).default("FREE"),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
+    confluence_page_url: z.string().url('Must be a valid URL'),
+    planning_title: z.string().min(1).max(255),
+    organization_id: z.string().min(1),
+    status: z.enum(['pending', 'active', 'completed']).default('pending'),
   });
 
-export async function POST(request: NextRequest) {
+// In your route handler:
+router.post('/', async (req: Request, res: Response) => {
   try {
-    const body = await request.json();
-    const { email, password, tier } = RegisterSchema.parse(body);
+    const validated = PlanningSessionSchema.parse(req.body);
 
-    // Password and confirmPassword validated, but confirmPassword not needed in DB
-    // Create user with validated data
+    const pool: Pool = req.app.get('db');
+    const result = await pool.query(
+      `INSERT INTO planning_sessions
+         (organization_id, confluence_page_url, planning_title, status, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, NOW(), NOW())
+       RETURNING *`,
+      [validated.organization_id, validated.confluence_page_url, validated.planning_title, validated.status]
+    );
 
-    return NextResponse.json({ success: true });
+    return res.status(201).json({ data: result.rows[0] });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Validation failed", details: error.errors },
-        { status: 400 },
-      );
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: error.errors,
+      });
     }
 
-    return NextResponse.json({ error: "Registration failed" }, { status: 500 });
+    return res.status(500).json({ error: 'Failed to create planning session' });
   }
-}
+});
 ```
 
 ## Related Patterns
 
-- [User Context API](./user-context-api.md) - Combine with RLS
+- [User Context API](./user-context-api.md) - Combine with authentication
 - [Admin Context API](./admin-context-api.md) - Admin validation
 - [API Integration Test](../testing/api-integration-test.md) - Test validation
 
 ---
 
-**Pattern Source**: `app/api/course/content/route.ts`
-**Last Updated**: 2025-10-03
+**Pattern Source**: `src/routes/`, `src/webhooks/handler.ts`
+**Last Updated**: 2026-03
 **Validated By**: System Architect

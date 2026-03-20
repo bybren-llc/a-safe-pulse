@@ -68,8 +68,8 @@ function encodeQueryParam(raw: string): string {
  * GOOD - Parameterized query (safe):
  *   `SELECT * FROM users WHERE name = $1`, [userInput]
  *
- * BEST - ORM with type-safe queries (safe + validated):
- *   {{ORM_CLIENT}}.users.findMany({ where: { name: userInput } })
+ * BEST - Parameterized query with typed client (safe + validated):
+ *   {{ORM_CLIENT}}.query('SELECT * FROM users WHERE name = $1', [userInput])
  */
 
 /**
@@ -207,7 +207,7 @@ function sanitizeRequestBody(body: unknown): unknown {
    - `{{LANGUAGE}}` with your language (e.g., `typescript`, `python`, `go`)
    - `{{EXT}}` with your file extension (e.g., `ts`, `py`, `go`)
    - `{{SOURCE_DIR}}` with your source directory (e.g., `src`, `app`, `lib`)
-   - `{{ORM_CLIENT}}` with your ORM client name (e.g., `prisma`, `drizzle`, `sequelize`)
+   - `{{ORM_CLIENT}}` with your database client name (e.g., `pool` for pg, `drizzle`, `knex`)
 
 2. **Adjust the HTML encoding map** for your rendering context. If you render into XML, SVG, or other markup contexts, add the relevant escape sequences for those formats.
 
@@ -223,7 +223,7 @@ function sanitizeRequestBody(body: unknown): unknown {
 
 - [ ] **HTML encoding applied** before rendering any user-provided string in HTML/templates
 - [ ] **Parameterized queries only** - no string concatenation in SQL/database queries
-- [ ] **ORM used for all database operations** - raw SQL avoided or wrapped in parameterized helpers
+- [ ] **Parameterized queries used for all database operations** - raw SQL uses $1/$2 placeholders, never string concatenation
 - [ ] **Dynamic identifiers allowlisted** - sort columns, table names validated against explicit lists
 - [ ] **Path traversal blocked** - user-provided filenames resolved and verified within allowed root
 - [ ] **Null bytes stripped** - `\0` characters removed from all string inputs

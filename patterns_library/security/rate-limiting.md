@@ -340,7 +340,7 @@ const RATE_LIMIT_PRESETS = {
    - `{{SOURCE_DIR}}` with your source directory (e.g., `src`, `app`, `lib`)
    - `{{REDIS_CLIENT_TYPE}}` with your Redis client type (e.g., `Redis` from ioredis, `RedisClient`)
    - `{{REQUEST_TYPE}}` with your request type (e.g., `NextRequest`, `Request`, `FastifyRequest`)
-   - `{{RESPONSE_TYPE}}` with your response type (e.g., `NextResponse`, `Response`, `FastifyReply`)
+   - `{{RESPONSE_TYPE}}` with your response type (e.g., `Response` from Express, `ServerResponse`, `FastifyReply`)
 
 2. **Choose your storage backend**: Use the in-memory limiter for development and single-instance deployments. Switch to the Redis-backed limiter for production multi-instance environments. Both implement the same `RateLimiter` interface so the calling code does not change.
 

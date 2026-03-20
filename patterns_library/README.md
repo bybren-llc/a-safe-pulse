@@ -4,12 +4,12 @@
 
 ## Overview
 
-This pattern library provides battle-tested, production-ready code patterns extracted from the ASP codebase. Each pattern is:
+This pattern library provides battle-tested, production-ready code patterns for the ASP codebase. Each pattern is:
 
-- ✅ **Copy-Paste Ready** - Minimal customization needed
-- ✅ **Security Validated** - RLS enforced, auth required, input validated
-- ✅ **SOLID Compliant** - Follows architectural principles
-- ✅ **Test Covered** - Includes testing patterns
+- **Copy-Paste Ready** - Minimal customization needed
+- **Security Validated** - RLS enforced, auth required, input validated
+- **SOLID Compliant** - Follows architectural principles
+- **Test Covered** - Includes testing patterns
 
 ## Pattern Index
 
@@ -17,32 +17,23 @@ This pattern library provides battle-tested, production-ready code patterns extr
 
 | Pattern                                           | File                                     | Use Case                          |
 | ------------------------------------------------- | ---------------------------------------- | --------------------------------- |
-| [User Context API](./api/user-context-api.md)     | Basic authenticated API with RLS         | User-specific CRUD operations     |
-| [Admin Context API](./api/admin-context-api.md)   | Admin-only API with elevated permissions | Admin dashboards, management      |
-| [Webhook Handler](./api/webhook-handler.md)       | External webhook processing              | Stripe, Clerk, third-party events |
+| [User Context API](./api/user-context-api.md)     | Authenticated Express API with pg        | User-specific CRUD operations     |
+| [Admin Context API](./api/admin-context-api.md)   | Admin-only Express API with elevated permissions | Admin dashboards, management |
+| [Webhook Handler](./api/webhook-handler.md)       | Express webhook with HMAC-SHA256 verification | Linear, third-party events   |
 | [Zod Validation API](./api/zod-validation-api.md) | Input validation with Zod schemas        | Form submissions, API inputs      |
-
-### UI Components
-
-| Pattern                                              | File                           | Use Case                 |
-| ---------------------------------------------------- | ------------------------------ | ------------------------ |
-| [Authenticated Page](./ui/authenticated-page.md)     | Protected page with auth check | User dashboard, profile  |
-| [Form with Validation](./ui/form-with-validation.md) | React Hook Form + Zod          | Data entry, settings     |
-| [Data Table](./ui/data-table.md)                     | Server-side paginated table    | List views, admin panels |
 
 ### Database Operations
 
-| Pattern                                                | File                           | Use Case             |
-| ------------------------------------------------------ | ------------------------------ | -------------------- |
-| [RLS Migration](./database/rls-migration.md)           | Add table with RLS policies    | New user data tables |
-| [Prisma Transaction](./database/prisma-transaction.md) | Multi-step database operations | Complex workflows    |
+| Pattern                                                  | File                              | Use Case             |
+| -------------------------------------------------------- | --------------------------------- | -------------------- |
+| [RLS Migration](./database/rls-migration.md)             | Raw SQL migration with RLS policies | New data tables    |
+| [SQL Transaction](./database/sql-transaction.md)         | pg BEGIN/COMMIT/ROLLBACK pattern  | Complex workflows    |
 
 ### Testing
 
 | Pattern                                                   | File                       | Use Case             |
 | --------------------------------------------------------- | -------------------------- | -------------------- |
-| [API Integration Test](./testing/api-integration-test.md) | Test API routes with RLS   | Endpoint validation  |
-| [E2E User Flow](./testing/e2e-user-flow.md)               | Playwright end-to-end test | User journey testing |
+| [API Integration Test](./testing/api-integration-test.md) | Jest + supertest for Express | Endpoint validation |
 
 ### Security
 
@@ -57,7 +48,7 @@ This pattern library provides battle-tested, production-ready code patterns extr
 | Pattern                                                       | File                             | Use Case                 |
 | ------------------------------------------------------------- | -------------------------------- | ------------------------ |
 | [GitHub Actions Workflow](./ci/github-actions-workflow.md)     | Standard CI pipeline             | Automated quality gates  |
-| [Deployment Pipeline](./ci/deployment-pipeline.md)             | Staging → production deployment  | Release management       |
+| [Deployment Pipeline](./ci/deployment-pipeline.md)             | Staging to production deployment | Release management       |
 
 ### Configuration
 
@@ -65,6 +56,17 @@ This pattern library provides battle-tested, production-ready code patterns extr
 | ------------------------------------------------------------- | -------------------------------- | ------------------------ |
 | [Environment Config](./config/environment-config.md)           | Typed environment loading        | App configuration        |
 | [Structured Logging](./config/structured-logging.md)           | JSON logging with correlation    | Observability            |
+
+### Archived (Upstream Harness Patterns)
+
+These patterns were inherited from the upstream harness template and do not apply to this project's tech stack (Node.js/Express/PostgreSQL -- no frontend UI).
+
+| Pattern | Archive Location | Reason |
+| ------- | ---------------- | ------ |
+| Authenticated Page | `docs/archive/harness-upstream/patterns-ui/` | No frontend UI in this project |
+| Form with Validation | `docs/archive/harness-upstream/patterns-ui/` | No frontend UI in this project |
+| Data Table | `docs/archive/harness-upstream/patterns-ui/` | No frontend UI in this project |
+| E2E User Flow | `docs/archive/harness-upstream/patterns-testing/` | No browser-based E2E testing |
 
 ## How to Use Patterns
 
@@ -95,9 +97,8 @@ Follow the customization guide in each pattern:
 Each pattern includes validation commands:
 
 ```bash
-yarn lint && yarn type-check  # For all patterns
-yarn test:integration          # For API patterns
-yarn test:e2e                  # For UI patterns
+npm run build && npm test          # For all patterns
+npm test -- --testPathPattern=integration  # For API patterns
 ```
 
 ## Pattern Discovery Protocol
@@ -106,11 +107,11 @@ yarn test:e2e                  # For UI patterns
 
 1. **This library first** - Use existing patterns when possible
 2. **Codebase search** - Look for similar implementations
-3. **BSA/ARCHitect** - Propose new patterns for validation
+3. **BSA/Architect** - Propose new patterns for validation
 
 ## Pattern Creation Guidelines
 
-When creating new patterns (BSA/ARCHitect only):
+When creating new patterns (BSA/Architect only):
 
 ### Required Elements
 
@@ -199,5 +200,6 @@ As patterns prove useful:
 ---
 
 **Last Updated**: 2026-03
-**Pattern Count**: 18
+**Active Pattern Count**: 14
+**Archived Pattern Count**: 4
 **Maintained by**: a-safe-pulse Development Team + System Architect
