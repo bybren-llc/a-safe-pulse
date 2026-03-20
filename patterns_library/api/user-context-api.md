@@ -2,26 +2,26 @@
 
 ## What It Does
 
-Creates an authenticated API route with Row Level Security (RLS) enforcement for user-specific data operations. Ensures users can only access their own data.
+Creates an authenticated Express API route for user-specific data operations. Ensures users can only access their own data via OAuth token validation and parameterized PostgreSQL queries.
 
 ## When to Use
 
-- User dashboard data (payments, subscriptions, profile)
-- User-specific CRUD operations
-- Protected endpoints requiring user authentication
+- User-specific CRUD operations (planning sessions, features, stories)
+- Protected endpoints requiring OAuth authentication
 - Any API that reads/writes user-owned data
+- User dashboard data retrieval
 
 ## Code Pattern
 
 ```typescript
-// app/api/{resource}/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import { withUserContext } from '@/lib/rls-context';
-import { prisma } from '@/lib/prisma';
+// src/routes/{resource}.ts
+import { Router, Request, Response } from 'express';
 import { z } from 'zod';
+import { Pool } from 'pg';
 
-// Optional: Zod validation schema
+const router = Router();
+
+// Optional: Zod validation schema for query parameters
 const QuerySchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(20),
   offset: z.coerce.number().min(0).default(0),
@@ -29,207 +29,180 @@ const QuerySchema = z.object({
 
 /**
  * GET /api/{resource} - Get user-specific data
+ *
+ * Requires: OAuth middleware applied upstream (sets req.user)
  */
-export async function GET(request: NextRequest) {
+router.get('/', async (req: Request, res: Response) => {
   try {
-    // 1. Authentication check
-    const { userId } = await auth();
+    // 1. Authentication check (OAuth middleware sets req.user)
+    const userId = (req as any).user?.id;
 
     if (!userId) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
-    // 2. Optional: Parse query parameters
-    const { searchParams } = new URL(request.url);
+    // 2. Parse and validate query parameters
     const query = QuerySchema.parse({
-      limit: searchParams.get('limit'),
-      offset: searchParams.get('offset'),
+      limit: req.query.limit,
+      offset: req.query.offset,
     });
 
-    // 3. Database operations within RLS context
-    const data = await withUserContext(prisma, userId, async (client) => {
-      return client.{table_name}.findMany({
-        where: {
-          user_id: userId,  // REQUIRED: Filter by user
-          // Add other conditions...
-        },
-        take: query.limit,
-        skip: query.offset,
-        orderBy: {
-          created_at: 'desc'
-        }
-      });
-    });
+    // 3. Database query with parameterized SQL
+    const pool: Pool = req.app.get('db');
+    const result = await pool.query(
+      `SELECT * FROM {table_name}
+       WHERE organization_id = $1
+       ORDER BY created_at DESC
+       LIMIT $2 OFFSET $3`,
+      [userId, query.limit, query.offset]
+    );
 
     // 4. Success response
-    return NextResponse.json({
-      data,
-      total: data.length,
-      user_id: userId
+    return res.json({
+      data: result.rows,
+      total: result.rows.length,
     });
-
   } catch (error) {
     console.error('Error fetching {resource}:', error);
 
     // Handle Zod validation errors
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Invalid parameters', details: error.errors },
-        { status: 400 }
-      );
+      return res.status(400).json({
+        error: 'Invalid parameters',
+        details: error.errors,
+      });
     }
 
-    return NextResponse.json(
-      { error: 'Failed to fetch {resource}' },
-      { status: 500 }
-    );
+    return res.status(500).json({ error: 'Failed to fetch {resource}' });
   }
-}
+});
 
 /**
  * POST /api/{resource} - Create user data
  */
-export async function POST(request: NextRequest) {
+router.post('/', async (req: Request, res: Response) => {
   try {
     // 1. Authentication check
-    const { userId } = await auth();
+    const userId = (req as any).user?.id;
 
     if (!userId) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     // 2. Parse and validate request body
-    const body = await request.json();
     const CreateSchema = z.object({
-      // Define your schema
       name: z.string().min(1),
-      // ... other fields
+      // ... other fields per spec
     });
 
-    const validated = CreateSchema.parse(body);
+    const validated = CreateSchema.parse(req.body);
 
-    // 3. Create data within RLS context
-    const created = await withUserContext(prisma, userId, async (client) => {
-      return client.{table_name}.create({
-        data: {
-          ...validated,
-          user_id: userId,  // REQUIRED: Set user ownership
-        }
-      });
-    });
-
-    // 4. Success response
-    return NextResponse.json(
-      { data: created },
-      { status: 201 }
+    // 3. Create data with parameterized SQL
+    const pool: Pool = req.app.get('db');
+    const result = await pool.query(
+      `INSERT INTO {table_name} (organization_id, name, created_at, updated_at)
+       VALUES ($1, $2, NOW(), NOW())
+       RETURNING *`,
+      [userId, validated.name]
     );
 
+    // 4. Success response
+    return res.status(201).json({ data: result.rows[0] });
   } catch (error) {
     console.error('Error creating {resource}:', error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Validation failed', details: error.errors },
-        { status: 400 }
-      );
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: error.errors,
+      });
     }
 
-    return NextResponse.json(
-      { error: 'Failed to create {resource}' },
-      { status: 500 }
-    );
+    return res.status(500).json({ error: 'Failed to create {resource}' });
   }
-}
+});
+
+export default router;
 ```
 
 ## Customization Guide
 
 1. **Replace placeholders**:
-   - `{resource}` → Your resource name (e.g., `payments`, `subscriptions`)
-   - `{table_name}` → Prisma model name (e.g., `payments`, `user_subscriptions`)
+   - `{resource}` -- Your resource name (e.g., `planning-sessions`, `features`)
+   - `{table_name}` -- PostgreSQL table name (e.g., `planning_sessions`, `planning_features`)
 
 2. **Update Zod schemas**:
    - Define validation for query parameters (QuerySchema)
    - Define validation for request body (CreateSchema, UpdateSchema)
 
-3. **Adjust database queries**:
+3. **Adjust SQL queries**:
    - Add WHERE conditions as needed
-   - Include related data with `include: {}`
+   - Add JOIN clauses for related data
    - Add sorting, pagination, filtering
 
 4. **Add business logic**:
-   - Enrollment checks
-   - Tier validation
+   - Organization membership checks
    - Access control rules
+   - Data transformation before response
 
 ## Security Checklist
 
-- [x] **RLS Context**: All database operations use `withUserContext()`
-- [x] **Authentication**: Check `userId` exists before operations
-- [x] **User Ownership**: Always filter/set `user_id` in queries
+- [x] **Authentication**: OAuth middleware validates user before handler executes
+- [x] **User Ownership**: Always filter by `organization_id` in queries
 - [x] **Input Validation**: Use Zod schemas for all inputs
+- [x] **Parameterized Queries**: Never concatenate user input into SQL
 - [x] **Error Handling**: Catch and log errors, return safe messages
-- [x] **No Direct Prisma**: Never use `prisma.model.operation()` directly
 
 ## Validation Commands
 
 ```bash
 # Type checking
-yarn type-check
+npm run build
 
-# Linting (will catch direct Prisma calls)
-yarn lint
+# Linting
+npm run lint 2>/dev/null || npx eslint src/routes/
 
-# Integration tests
-yarn test:integration
+# Run tests
+npm test
 
 # Full validation
-yarn ci:validate
+npm test && npm run build && echo "BE SUCCESS" || echo "BE FAILED"
 ```
 
-## Example: User Payments API
+## Example: Planning Sessions API
 
 ```typescript
-// app/api/user/payments/route.ts
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
-import { withUserContext } from "@/lib/rls-context";
-import { prisma } from "@/lib/prisma";
+// src/routes/planning-sessions.ts
+import { Router, Request, Response } from 'express';
+import { Pool } from 'pg';
 
-export async function GET(request: NextRequest) {
+const router = Router();
+
+router.get('/', async (req: Request, res: Response) => {
   try {
-    const { userId } = await auth();
+    const organizationId = (req as any).user?.organizationId;
 
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 },
-      );
+    if (!organizationId) {
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const payments = await withUserContext(prisma, userId, async (client) => {
-      return client.payments.findMany({
-        where: { user_id: userId },
-        orderBy: { created_at: "desc" },
-        take: 50,
-      });
-    });
-
-    return NextResponse.json({ data: payments });
-  } catch (error) {
-    console.error("Error fetching payments:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch payments" },
-      { status: 500 },
+    const pool: Pool = req.app.get('db');
+    const result = await pool.query(
+      `SELECT * FROM planning_sessions
+       WHERE organization_id = $1
+       ORDER BY created_at DESC
+       LIMIT 50`,
+      [organizationId]
     );
+
+    return res.json({ data: result.rows });
+  } catch (error) {
+    console.error('Error fetching planning sessions:', error);
+    return res.status(500).json({ error: 'Failed to fetch planning sessions' });
   }
-}
+});
+
+export default router;
 ```
 
 ## Related Patterns
@@ -240,6 +213,6 @@ export async function GET(request: NextRequest) {
 
 ---
 
-**Pattern Source**: `app/api/course/content/student/route.ts`
-**Last Updated**: 2025-10-03
+**Pattern Source**: `src/webhooks/handler.ts`, `src/index.ts`
+**Last Updated**: 2026-03
 **Validated By**: System Architect
