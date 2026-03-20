@@ -144,7 +144,7 @@ All work must include evidence in Linear:
 **Validation**:
 
 ```bash
-yarn ci:validate
+npm test && npm run build
 # All checks passed
 ```
 ````

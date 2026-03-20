@@ -9,7 +9,7 @@ Search codebase for patterns using optimized tools. Useful for refactoring, find
 ## Usage
 
 ```bash
-/search-pattern "prisma\." ts     # Find direct Prisma usage in TypeScript
+/search-pattern "pool\.query" ts   # Find direct database queries in TypeScript
 /search-pattern "withUserContext" # Find RLS context usage
 /search-pattern "import.*icons"  # Find icon imports
 ```
@@ -37,7 +37,7 @@ Use the Grep tool with these parameters:
 
 | Parameter     | Value                     | Example              |
 | ------------- | ------------------------- | -------------------- |
-| `pattern`     | The regex pattern to find | `"prisma\."`         |
+| `pattern`     | The regex pattern to find | `"pool\.query"`      |
 | `output_mode` | `"content"`               | Shows matching lines |
 | `head_limit`  | Limit results (optional)  | `50`                 |
 
@@ -72,10 +72,10 @@ Group by:
 ### Find Direct Database Access
 
 ```bash
-/search-pattern "prisma\.(user|payment|subscription)" ts
+/search-pattern "pool\.query|client\.query" ts
 ```
 
-Identifies: Direct Prisma calls that should use RLS context helpers
+Identifies: Direct database calls that should use RLS context helpers
 
 ### Find Icon Library Usage
 
@@ -145,7 +145,7 @@ For patterns spanning multiple lines (e.g., finding function bodies):
 | `multiline` | `true`                                  | Enable multiline matching |
 | `type`      | `"ts"`                                  | Optional file type filter |
 
-Example: Find async functions that return Prisma results
+Example: Find async functions that return database query results
 
 ### Context Search
 
@@ -225,7 +225,7 @@ Ensures RLS patterns followed.
 Find imports:
 
 ```bash
-/search-pattern "from '@/lib/prisma'"
+/search-pattern "from '@/lib/db'"
 ```
 
 Understand module dependencies.

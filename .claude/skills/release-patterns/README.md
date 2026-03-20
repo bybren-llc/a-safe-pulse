@@ -19,7 +19,7 @@ The skill system architecture and ASP harness methodology are the intellectual p
 
 This skill activates automatically when you:
 - Create pull requests
-- Run pre-PR validation (`yarn ci:validate`)
+- Run pre-PR validation (`npm test && npm run build`)
 - Check CI/CD status
 - Coordinate merge timing
 

@@ -112,7 +112,7 @@ Use mcp__linear-mcp__create_comment with:
 1. **Read spec** → `cat specs/ASP-XXX-{feature}-spec.md`
 2. **Find test pattern** → Check spec for testing strategy, read from `patterns_library/testing/`
 3. **Copy & customize** → Follow pattern's test implementation guide
-4. **Validate** → Run `yarn test:unit && yarn test:integration && yarn test:e2e`
+4. **Validate** → Run `npm test && npm test && # E2E not configured`
 
 **That's it!** BSA defined the testing strategy. You just execute the tests.
 
@@ -120,7 +120,7 @@ Use mcp__linear-mcp__create_comment with:
 
 ```bash
 # Full test suite
-yarn test:unit && yarn test:integration && yarn test:e2e && echo "QAS SUCCESS" || echo "QAS FAILED"
+npm test && npm test && # E2E not configured && echo "QAS SUCCESS" || echo "QAS FAILED"
 ```
 
 ## Pattern Execution Workflow (ASP-300)
@@ -156,13 +156,13 @@ ls patterns_library/testing/
 
 ```typescript
 import { describe, it, expect, jest } from "@jest/globals";
-import { NextRequest } from "next/server";
+import { Request } from "express";
 
 // Mock auth and RLS
-jest.mock("@clerk/nextjs/server");
+jest.mock("../auth/oauth");
 jest.mock("@/lib/rls-context");
 
-import { auth } from "@clerk/nextjs/server";
+import { verifyAuth } from "../auth/oauth";
 import { GET, POST } from "@/app/api/{resource}/route";
 
 const mockAuth = auth as jest.MockedFunction<typeof auth>;
@@ -184,7 +184,7 @@ describe("API Integration: /api/{resource}", () => {
 **For E2E Tests (e2e-user-flow.md):**
 
 ```typescript
-import { test, expect } from "@playwright/test";
+import { test, expect } from "jest";
 
 test.describe("{Feature} Workflow", () => {
   test.beforeEach(async ({ page }) => {
@@ -218,16 +218,16 @@ test.describe("{Feature} Workflow", () => {
 
 ```bash
 # Run unit tests
-yarn test:unit
+npm test
 
 # Run integration tests (tests APIs)
-yarn test:integration
+npm test
 
 # Run E2E tests (full user workflows)
-yarn test:e2e
+# E2E not configured
 
 # Check coverage
-yarn test:coverage
+npm test:coverage
 ```
 
 ## Common Tasks
@@ -253,7 +253,7 @@ cat patterns_library/testing/api-integration-test.md
 cat patterns_library/testing/e2e-user-flow.md
 
 # Pattern includes:
-# - Playwright setup
+# - Jest setup
 # - Login beforeEach
 # - Form interactions
 # - Navigation testing
@@ -297,10 +297,10 @@ test('displays success message', ...)           # ✅
 Before approving work:
 
 1. **Validation Complete**
-   - `yarn test:unit` → PASS
-   - `yarn test:integration` → PASS
-   - `yarn type-check` → PASS
-   - `yarn lint` → PASS
+   - `npm test` → PASS
+   - `npm test` → PASS
+   - `npx tsc --noEmit` → PASS
+   - `npx tsc --noEmit` → PASS
 
 2. **AC/DoD Verified**
    - [ ] ALL acceptance criteria met

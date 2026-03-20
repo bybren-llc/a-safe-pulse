@@ -1,5 +1,5 @@
 name = "fe-developer"
-description = "Frontend Developer - UI implementation using patterns from patterns_library/ui/. Use when UI components need building, client-side logic needs implementation, forms need validation, or data display tables need creating."
+description = "Frontend Developer (DORMANT - no frontend in this repo) - UI implementation using patterns from patterns_library/ui/. Use when UI components need building, client-side logic needs implementation, forms need validation, or data display tables need creating."
 model = "gpt-5.4"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
@@ -70,7 +70,7 @@ Exit State: "Ready for QAS"
 Before reporting completion:
 1. Validation Loop Complete (lint, type-check, build all pass)
 2. AC/DoD Checklist (all acceptance criteria met, evidence captured)
-3. Visual Evidence (screenshots or Playwright evidence if UI work)
+3. Visual Evidence (screenshots or Jest evidence if UI work)
 4. Handoff: "FE implementation complete for ASP-XXX. All validation
    passing. AC/DoD confirmed. Ready for QAS review."
 

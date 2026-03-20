@@ -3,9 +3,8 @@ name: rls-patterns
 description: >
   Row Level Security patterns for database operations. Use when writing any
   database query, creating API routes that access data, implementing webhooks
-  that write to the database, or working with user data. Enforces
-  withUserContext, withAdminContext, or withSystemContext helpers. NEVER use
-  direct ORM/DB calls without RLS context wrappers.
+  that write to the database, or working with user data. This project uses
+  direct pg (node-postgres) queries with raw SQL -- no ORM.
 ---
 
 # RLS Patterns Skill
@@ -16,12 +15,20 @@ description: >
 
 Enforce Row Level Security (RLS) patterns for all database operations. This skill ensures data isolation and prevents cross-user data access at the database level.
 
+## Current Tech Stack
+
+- **Database**: PostgreSQL (production) via `pg` (node-postgres) -- direct SQL queries
+- **Dev Database**: SQLite via `SQLITE_DB_PATH` for local development
+- **Connection**: `src/db/connection.ts` exports `query()` and `getClient()`
+- **Migrations**: Raw SQL files in `src/db/migrations/` (auto-run on startup)
+- **No ORM**: Direct SQL queries only (no ORM)
+
 ## When This Skill Applies
 
-- Writing any database query (ORM or raw SQL)
-- Creating or modifying API routes that access the database
+- Writing any database query (raw SQL via `query()` or `getClient()`)
+- Creating or modifying Express API routes that access the database
 - Implementing webhook handlers that write to the database
-- Working with user data, payments, subscriptions, or enrollments
+- Working with user data, tokens, or planning sessions
 - Accessing admin-only tables
 
 ## Critical Rules
@@ -29,184 +36,203 @@ Enforce Row Level Security (RLS) patterns for all database operations. This skil
 ### NEVER Do This
 
 ```typescript
-// FORBIDDEN - Direct DB calls bypass RLS
-const user = await db.user.findUnique({ where: { user_id } });
+// FORBIDDEN - Unparameterized queries are SQL injection risks
+const result = await query(`SELECT * FROM linear_tokens WHERE org_id = '${orgId}'`);
 
-// FORBIDDEN - No context set
-const payments = await db.payments.findMany();
+// FORBIDDEN - Direct queries without considering data isolation
+const tokens = await query('SELECT * FROM linear_tokens');
 ```
-
-**Linting will block direct DB calls.** See linting configuration for enforcement rules.
 
 ### ALWAYS Do This
 
 ```typescript
-import {
-  withUserContext,
-  withAdminContext,
-  withSystemContext,
-} from "{{RLS_IMPORT}}";
+import { query, getClient } from '{{DB_CONNECTION_IMPORT}}';
 
-// CORRECT - User context for user operations
-const user = await withUserContext(db, userId, async (client) => {
-  return client.user.findUnique({ where: { user_id: userId } });
-});
+// CORRECT - Parameterized queries
+const result = await query(
+  'SELECT * FROM linear_tokens WHERE organization_id = $1',
+  [orgId]
+);
 
-// CORRECT - Admin context for admin operations
-const webhooks = await withAdminContext(db, userId, async (client) => {
-  return client.webhook_events.findMany();
-});
-
-// CORRECT - System context for webhooks/background tasks
-const event = await withSystemContext(db, "webhook", async (client) => {
-  return client.webhook_events.create({ data: eventData });
-});
-```
-
-## Context Helper Reference
-
-### `withUserContext(db, userId, callback)`
-
-**Use for**: All user-facing operations
-
-- User profile access
-- Payment history
-- Subscription management
-- Enrollments and personal data
-
-```typescript
-const payments = await withUserContext(db, userId, async (client) => {
-  return client.payments.findMany({ where: { user_id: userId } });
-});
-```
-
-### `withAdminContext(db, userId, callback)`
-
-**Use for**: Admin-only operations (requires admin role)
-
-- Viewing all webhook events
-- Managing disputes
-- Accessing payment failures
-
-```typescript
-const disputes = await withAdminContext(db, adminUserId, async (client) => {
-  return client.disputes.findMany();
-});
-```
-
-### `withSystemContext(db, contextType, callback)`
-
-**Use for**: Webhooks and background jobs
-
-- Webhook handlers (Stripe, auth provider, etc.)
-- Background job processing
-- System-initiated operations
-
-```typescript
-await withSystemContext(db, "webhook", async (client) => {
-  await client.payments.create({ data: paymentData });
-});
-```
-
-## Admin Pages: Force Dynamic Rendering
-
-**CRITICAL**: Admin pages using RLS queries MUST force runtime rendering (in Next.js):
-
-```typescript
-// REQUIRED - RLS context unavailable at build time
-export const dynamic = "force-dynamic";
-
-async function getAdminData() {
-  return await withAdminContext(db, userId, async (client) => {
-    return client.someTable.findMany();
-  });
+// CORRECT - Transactions with getClient() for multi-step operations
+const client = await getClient();
+try {
+  await client.query('BEGIN');
+  await client.query(
+    'INSERT INTO planning_sessions (id, org_id, status) VALUES ($1, $2, $3)',
+    [sessionId, orgId, 'active']
+  );
+  await client.query('COMMIT');
+} catch (error) {
+  await client.query('ROLLBACK');
+  throw error;
+} finally {
+  client.release();
 }
 ```
 
-Without forced dynamic rendering, frameworks may try to pre-render at build time, causing "permission denied" errors.
+## RLS Architecture: Current State and Target
+
+### Current State
+
+a-safe-pulse currently uses **application-level data isolation** -- queries filter by `organization_id` or session ownership in the SQL WHERE clauses. The `query()` and `getClient()` helpers in `src/db/connection.ts` provide the database access layer.
+
+### Target Architecture (When RLS Is Added)
+
+When PostgreSQL RLS policies are introduced:
+
+1. **Session variables** will set user/org context: `SET app.current_user_id = '...'`
+2. **RLS policies** on tables will enforce row-level filtering automatically
+3. **Application roles** (`{{PROJECT}}_app_user`) will have restricted GRANT permissions
+4. **Context helpers** will wrap queries to set session variables before execution
+
+### When to Use Raw SQL Safely
+
+**Always** use parameterized queries (`$1`, `$2`, etc.) -- never interpolate values into SQL strings. The `query()` function in `src/db/connection.ts` accepts parameters as the second argument.
+
+## Database Access Patterns
+
+### Simple Query
+
+```typescript
+import { query } from '{{DB_CONNECTION_IMPORT}}';
+
+// Parameterized read
+const result = await query(
+  'SELECT * FROM planning_sessions WHERE id = $1 AND org_id = $2',
+  [sessionId, orgId]
+);
+const session = result.rows[0];
+```
+
+### Transaction Pattern
+
+```typescript
+import { getClient } from '{{DB_CONNECTION_IMPORT}}';
+
+const client = await getClient();
+try {
+  await client.query('BEGIN');
+
+  // Insert parent record
+  const sessionResult = await client.query(
+    'INSERT INTO planning_sessions (id, org_id) VALUES ($1, $2) RETURNING *',
+    [sessionId, orgId]
+  );
+
+  // Insert child records
+  await client.query(
+    'INSERT INTO planning_features (session_id, title) VALUES ($1, $2)',
+    [sessionId, featureTitle]
+  );
+
+  await client.query('COMMIT');
+  return sessionResult.rows[0];
+} catch (error) {
+  await client.query('ROLLBACK');
+  throw error;
+} finally {
+  client.release();
+}
+```
 
 ## Protected Tables
 
-### User Data Tables (User Isolation)
+### Session/Token Tables
 
-| Table               | Policy Type    | Access                 |
-| ------------------- | -------------- | ---------------------- |
-| `user`              | User isolation | Own data only          |
-| `payments`          | User isolation | Own payments only      |
-| `subscriptions`     | User isolation | Own subscriptions only |
-| `invoices`          | User isolation | Own invoices only      |
+| Table               | Isolation Key      | Access Pattern             |
+| ------------------- | ------------------ | -------------------------- |
+| `linear_tokens`     | `organization_id`  | Filter by org              |
+| `confluence_tokens` | `organization_id`  | Filter by org              |
+| `planning_sessions` | `id` + `org_id`    | Filter by org/session      |
+| `planning_features` | `session_id`       | Filter by parent session   |
+| `planning_stories`  | `session_id`       | Filter by parent session   |
 
-### Admin/System Tables (Role-Based)
+## Express Middleware Example
 
-| Table                 | Policy Type  | Access                   |
-| --------------------- | ------------ | ------------------------ |
-| `webhook_events`      | Admin+System | Admins and webhooks only |
-| `disputes`            | Admin only   | Admins only              |
-| `payment_failures`    | Admin only   | Admins only              |
+```typescript
+import { Request, Response, NextFunction } from 'express';
 
-## Testing Requirements
-
-Always test with the application-level DB user role (not a superuser):
-
-```bash
-# Basic RLS functionality test
-{{RLS_TEST_COMMAND}}
-
-# Comprehensive security validation
-{{RLS_VALIDATION_COMMAND}}
+// Middleware to validate org access
+function requireOrgAccess(req: Request, res: Response, next: NextFunction) {
+  const orgId = req.params.orgId || req.query.orgId;
+  if (!orgId) {
+    return res.status(400).json({ error: 'Organization ID required' });
+  }
+  // Attach to request for downstream handlers
+  (req as any).orgId = orgId;
+  next();
+}
 ```
 
 ## Common Patterns
 
-### API Route with User Context
+### Express Route with Data Isolation
 
 ```typescript
-import { NextResponse } from "next/server";
-import { requireAuth } from "{{AUTH_IMPORT}}";
-import { withUserContext } from "{{RLS_IMPORT}}";
-import { db } from "{{DB_IMPORT}}";
+import { Router, Request, Response } from 'express';
+import { query } from '{{DB_CONNECTION_IMPORT}}';
 
-export async function GET() {
-  const { userId } = await requireAuth();
+const router = Router();
 
-  const payments = await withUserContext(db, userId, async (client) => {
-    return client.payments.findMany({
-      where: { user_id: userId },
-      orderBy: { created_at: "desc" },
-    });
-  });
+router.get('/api/planning/:orgId/sessions', async (req: Request, res: Response) => {
+  try {
+    const { orgId } = req.params;
 
-  return NextResponse.json(payments);
+    const result = await query(
+      'SELECT * FROM planning_sessions WHERE org_id = $1 ORDER BY created_at DESC',
+      [orgId]
+    );
+
+    res.json({ data: result.rows });
+  } catch (error) {
+    console.error('Error fetching sessions:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+```
+
+### Webhook Handler with Transaction
+
+```typescript
+import { getClient } from '{{DB_CONNECTION_IMPORT}}';
+
+async function handleWebhookEvent(event: WebhookEvent): Promise<void> {
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+
+    // Record the webhook event
+    await client.query(
+      `INSERT INTO webhook_events (event_id, event_type, payload, processed_at)
+       VALUES ($1, $2, $3, NOW())
+       ON CONFLICT (event_id) DO NOTHING`,
+      [event.id, event.type, JSON.stringify(event.data)]
+    );
+
+    // Process event-specific logic...
+
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 ```
 
-### Webhook Handler with System Context
+## Testing Requirements
 
-```typescript
-import { withSystemContext } from "{{RLS_IMPORT}}";
-import { db } from "{{DB_IMPORT}}";
+Always test with parameterized queries and verify data isolation:
 
-export async function POST(req: Request) {
-  // Verify webhook signature first...
-
-  await withSystemContext(db, "webhook", async (client) => {
-    await client.webhook_events.create({
-      data: {
-        event_type: event.type,
-        payload: event.data,
-        processed_at: new Date(),
-      },
-    });
-  });
-
-  return new Response("OK", { status: 200 });
-}
+```bash
+{{TEST_COMMAND}}
 ```
 
 ## Authoritative References
 
-- **RLS Implementation Guide**: `docs/database/RLS_IMPLEMENTATION_GUIDE.md`
-- **RLS Policy Catalog**: `docs/database/RLS_POLICY_CATALOG.md`
-- **Migration SOP**: `docs/database/RLS_DATABASE_MIGRATION_SOP.md`
-- **Linting Rules**: Check linting config for direct DB call enforcement
-- **RLS Context Helpers**: `{{RLS_CONTEXT_FILE}}`
+- **DB Connection**: `src/db/connection.ts` (query + getClient exports)
+- **Migrations**: `src/db/migrations/` (raw SQL, auto-run on startup)
+- **Migration Index**: `src/db/migrations/index.ts` (registration and execution)
+- **Security Guide**: `docs/guides/SECURITY_FIRST_ARCHITECTURE.md`

@@ -26,9 +26,9 @@ Welcome to Claude Code Harness for Multi-Agent Team Workflows! This guide covers
 1. **Install Dependencies**:
 
    ```bash
-   # Install Node.js 18+ and Yarn
+   # Install Node.js 18+
    node --version  # Should be 18+
-   yarn --version  # Should be 1.22+
+   npm --version   # Bundled with Node.js
    ```
 
 2. **Clone and Setup**:
@@ -36,7 +36,7 @@ Welcome to Claude Code Harness for Multi-Agent Team Workflows! This guide covers
    ```bash
    git clone https://github.com/bybren-llc/a-safe-pulse-app.git
    cd a-safe-pulse-app
-   yarn install
+   npm install
    ```
 
 3. **Environment Setup**:
@@ -50,7 +50,8 @@ Welcome to Claude Code Harness for Multi-Agent Team Workflows! This guide covers
 
    ```bash
    docker-compose up -d  # Start PostgreSQL
-   npx prisma migrate dev
+   # Migrations are raw SQL files in src/db/migrations/
+   # They run automatically on application startup
    ```
 
 5. **CI/CD Setup** (First time only):
@@ -66,7 +67,7 @@ AI agents (Claude Code, Augment agents) should:
 1. **Read this entire document** before starting work
 2. **Follow all workflow processes** exactly as human developers
 3. **Use the PR template** at `.github/pull_request_template.md`
-4. **Run local validation** with `yarn ci:validate` before pushing
+4. **Run local validation** with `npm test && npm run build` before pushing
 5. **Reference Linear tickets** in all commits and PRs
 
 ## AI Agent Guidelines
@@ -77,7 +78,7 @@ AI agents (Claude Code, Augment agents) should:
 
 - Follow the exact branch naming convention: `ASP-{number}-{description}`
 - Use SAFe commit message format with Linear ticket references
-- Run `yarn ci:validate` before pushing any code
+- Run `npm test && npm run build` before pushing any code
 - Use the comprehensive PR template completely
 - Follow rebase-first workflow (never create merge commits)
 - Reference the Linear ticket in all commits and PR title
@@ -108,7 +109,7 @@ git checkout -b ASP-123-implement-feature
 git commit -m "feat(scope): implement feature [ASP-123]"
 
 # 3. Before pushing - ALWAYS validate locally
-yarn ci:validate
+npm test && npm run build
 
 # 4. Rebase and push
 git fetch origin && git rebase origin/dev
@@ -131,7 +132,6 @@ git push --force-with-lease origin ASP-123-implement-feature
 
 **Example Implementation Tickets:**
 
-- Add Redis to docker-compose.yml (30 min)
 - Remove unused dependencies (15 min)
 - Add health endpoints (45 min)
 - Wire Slack alerting (2 hours)
@@ -145,7 +145,7 @@ git push --force-with-lease origin ASP-123-implement-feature
 
 - `ASP-42-add-user-authentication`
 - `ASP-57-fix-profile-image-upload`
-- `ASP-123-implement-stripe-checkout`
+- `ASP-123-implement-oauth-flow`
 
 ### ❌ Incorrect Examples
 
@@ -185,9 +185,9 @@ type(scope): description [ASP-XXX]
 
 ### Scope (Optional)
 
-- `payments` - Payment-related changes
+- `safe` - SAFe framework changes
 - `auth` - Authentication features
-- `ui` - User interface components
+- `cli` - CLI tool changes
 - `api` - API routes and backend
 - `db` - Database changes
 
@@ -196,7 +196,7 @@ type(scope): description [ASP-XXX]
 ✅ **Correct**:
 
 ```
-feat(payments): add Stripe checkout integration [ASP-42]
+feat(auth): add Confluence OAuth integration [ASP-42]
 fix(auth): resolve login redirect issue [ASP-57]
 docs: update API documentation [ASP-123]
 ```
@@ -242,13 +242,11 @@ git rebase origin/dev
 
 ```bash
 # REQUIRED: Run local validation
-yarn ci:validate
+npm test && npm run build
 
 # This runs:
-# - yarn type-check (TypeScript validation)
-# - yarn lint (ESLint validation)
-# - yarn test:unit (Unit tests)
-# - yarn format:check (Prettier formatting)
+# - Jest test suite
+# - TypeScript compilation (production build)
 
 # Fix any issues before proceeding
 ```
@@ -358,7 +356,6 @@ The CI/CD pipeline automatically validates:
 3. **Comprehensive Testing** 🧪
    - Unit tests (fast feedback)
    - Integration tests (API/database)
-   - E2E tests (full user workflows)
 
 4. **Quality & Security** 🔍
    - ESLint + TypeScript validation
@@ -366,8 +363,7 @@ The CI/CD pipeline automatically validates:
    - Code formatting (Prettier)
 
 5. **Build Verification** 🏗️
-   - Next.js production build
-   - Asset optimization
+   - TypeScript production build
    - Build artifact validation
 
 6. **Conflict Detection** 🚨
@@ -393,33 +389,17 @@ The CI/CD pipeline automatically validates:
 
 ## CI/CD Pipeline
 
-### GitHub Secrets Configuration
-
-**Required for full CI test coverage** (optional but recommended):
-
-1. Navigate to your repository's **Settings → Secrets and variables → Actions**
-2. Add the following repository secrets:
-   - `STRIPE_TEST_SECRET_KEY` - Your Stripe test mode secret key (sk*test*...)
-   - `STRIPE_TEST_WEBHOOK_SECRET` - Your Stripe test webhook signing secret (whsec\_...)
-
-**Note**: CI will run with safe placeholders if these aren't configured, but real test keys provide better coverage.
-
 ### Local Validation Commands
 
 ```bash
 # Run all quality checks (REQUIRED before pushing)
-yarn ci:validate
+npm test && npm run build
 
 # Individual checks
-yarn type-check      # TypeScript validation
-yarn lint           # ESLint validation (uses eslint.config.mjs flat config - ASP-290)
-yarn test:unit      # Unit tests
-yarn test:integration # Integration tests
-yarn format:check   # Prettier formatting
-yarn build          # Production build test
+npm test             # Jest test suite (unit + integration)
+npm run build        # TypeScript production build
+npm run build:dev    # TypeScript build including tests
 ```
-
-**Note (ASP-290)**: Linting now uses ESLint CLI directly instead of `next lint`. Configuration is in `eslint.config.mjs` (flat config format). The legacy `.eslintrc.json` has been removed.
 
 ### Pipeline Stages
 
@@ -449,9 +429,10 @@ docker-compose up -d
 cp .env.template .env
 # Edit .env with your values
 
-# Database migrations
-npx prisma migrate dev
-npx prisma generate
+# Database migrations (raw SQL in src/db/migrations/)
+# Migrations run automatically on application startup
+# To add a new migration, create a SQL file in src/db/migrations/
+# and register it in src/db/migrations/index.ts
 
 # RLS Security Setup (Important!)
 # The database now uses Row Level Security for data protection
@@ -463,23 +444,19 @@ npx prisma generate
 
 ```bash
 # Start development server
-yarn dev
+npm run dev
 
 # Database management
-npx prisma studio          # Database GUI
-npx prisma migrate dev      # Run migrations
-npx prisma db push         # Push schema changes (dev only)
+# Connect directly via psql:
+# docker exec -it cheddarfox-team-postgres-1 psql -U cheddarfox_app_user -d linear_agent
+# Migrations are raw SQL files in src/db/migrations/
 
 # Testing
-yarn test:unit             # Unit tests
-yarn test:integration      # Integration tests
-yarn test:e2e             # E2E tests (requires running server)
+npm test                   # All tests (Jest)
 
-# Code quality
-yarn lint                  # ESLint (migrated from 'next lint' - ASP-290)
-yarn lint:fix             # Auto-fix ESLint issues
-yarn format               # Format with Prettier
-yarn type-check           # TypeScript validation
+# Build
+npm run build              # Production build (TypeScript)
+npm run build:dev          # Development build (includes tests)
 
 # RLS Security Testing
 node scripts/test-rls-phase3-simple.js  # Basic RLS functionality test
@@ -534,21 +511,30 @@ docker exec cheddarfox-team-postgres-1 psql -U cheddarfox_app_user -d linear_age
 
 ```typescript
 // User operation - automatic context setting
-const userPayments = await withUserContext(prisma, userId, async (client) => {
-  return client.payments.findMany({ where: { user_id: userId } });
+const userTokens = await withUserContext(pool, userId, async (client) => {
+  const result = await client.query(
+    'SELECT * FROM linear_tokens WHERE user_id = $1 ORDER BY created_at DESC',
+    [userId]
+  );
+  return result.rows;
 });
 
 // Admin operation - requires admin role
-const webhookEvents = await withAdminContext(prisma, userId, async (client) => {
-  return client.webhook_events.findMany();
+const webhookEvents = await withAdminContext(pool, userId, async (client) => {
+  const result = await client.query('SELECT * FROM webhook_events');
+  return result.rows;
 });
 
 // System operation - for background tasks
 const systemData = await withSystemContext(
-  prisma,
+  pool,
   "webhook",
   async (client) => {
-    return client.webhook_events.create({ data: webhookData });
+    const result = await client.query(
+      'INSERT INTO webhook_events (event_type, payload) VALUES ($1, $2) RETURNING *',
+      [eventType, JSON.stringify(webhookData)]
+    );
+    return result.rows[0];
   },
 );
 ```
@@ -595,7 +581,7 @@ git push --force-with-lease origin your-branch
 
 ```bash
 # Run local validation to see specific issues
-yarn ci:validate
+npm test && npm run build
 
 # Fix issues and commit
 git add .
@@ -618,12 +604,10 @@ git commit -m "fix: resolve CI validation issues [ASP-XXX]"
 - **Security Architecture**: `docs/guides/SECURITY_FIRST_ARCHITECTURE.md` (REQUIRED for new services)
 - **Technical Improvements Strategy**: `docs/technical-improvements/` (Complete implementation roadmap)
 - **Implementation Tickets**: `docs/technical-improvements/07-implementation-roadmap.md#immediate-implementation-tickets`
-- **Redis Implementation Contract**: `docs/contracts/REDIS_IMPLEMENTATION_CONTRACT.md` (Infrastructure team agreement)
 - **CI/CD Setup**: `scripts/setup-ci-cd.sh`
 - **Pipeline Guide**: `docs/CI-CD-Pipeline-Guide.md`
 - **Team Workflow**: `docs/a-safe-pulse-Multi-Team-Git-Workflow-Guide.md`
 - **Implementation Checklist**: `docs/ci-cd-implementation-checklist.md`
-- **Payment Test Status**: `__tests__/PAYMENT_TESTS_STATUS.md`
 - **TypeScript Cleanup**: `docs/archive/asp-139-typescript-cleanup-status.md` (ASP-139)
 
 ### Confluence Documentation

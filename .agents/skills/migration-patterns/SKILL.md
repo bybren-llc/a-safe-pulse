@@ -2,9 +2,9 @@
 name: migration-patterns
 description: >
   Database migration creation with mandatory RLS policies and ARCHitect approval
-  workflow. Use when creating migrations, adding tables with RLS, updating ORM
-  schema, adding GRANT statements, or planning data migrations. Do NOT use for
-  application code changes without schema impact.
+  workflow. Use when creating migrations, adding tables, or planning data
+  migrations. Migrations are raw SQL files in `src/db/migrations/` with
+  `XXX_description.sql` naming, registered in `index.ts`, auto-run on startup.
 ---
 
 # Migration Patterns Skill
@@ -15,12 +15,21 @@ description: >
 
 Guide database migration creation with mandatory RLS policies, following security-first architecture and approval workflow.
 
+## Current Tech Stack
+
+- **Migrations**: Raw SQL files in `src/db/migrations/`
+- **Naming**: `XXX_description.sql` (e.g., `001_initial_schema.sql`)
+- **Registration**: `src/db/migrations/index.ts` auto-discovers and runs `.sql` files
+- **Execution**: Auto-run on startup in sorted order, tracked in `migrations` table
+- **Database**: PostgreSQL (prod) / SQLite (dev)
+- **No ORM migrations**: Raw SQL only (no ORM migration tools)
+
 ## When This Skill Applies
 
 - Creating database migrations
-- Adding new tables (all tables need RLS)
-- Updating ORM schema
-- Adding GRANT statements
+- Adding new tables
+- Altering existing schemas
+- Adding indexes or constraints
 - Schema impact analysis
 - Data migration planning
 
@@ -29,20 +38,16 @@ Guide database migration creation with mandatory RLS policies, following securit
 ### FORBIDDEN Patterns
 
 ```sql
--- FORBIDDEN: RLS policies in separate file
+-- FORBIDDEN: RLS policies in separate file from table creation
 -- RLS MUST be in the same migration file as the table creation
 
--- FORBIDDEN: Table without RLS
+-- FORBIDDEN: Table without RLS consideration
 CREATE TABLE user_data (...);
--- Missing: ALTER TABLE user_data ENABLE ROW LEVEL SECURITY;
+-- Must document RLS plan even if not yet enforced
 
--- FORBIDDEN: Resolve applied migrations (bypasses verification)
--- npx prisma migrate resolve --applied "migration_name"
--- alembic stamp head
-
--- FORBIDDEN: Missing user_id index
-CREATE TABLE payments (...);
--- Missing: CREATE INDEX idx_payments_user_id ON payments(user_id);
+-- FORBIDDEN: Missing index on foreign key / filter columns
+CREATE TABLE planning_features (...);
+-- Missing: CREATE INDEX idx_planning_features_session_id ON planning_features(session_id);
 
 -- FORBIDDEN: Schema changes without ARCHitect approval
 -- All migrations require approval before PR
@@ -51,27 +56,27 @@ CREATE TABLE payments (...);
 ### CORRECT Patterns
 
 ```sql
--- CORRECT: Complete migration with RLS in same file
-CREATE TABLE user_data (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id TEXT NOT NULL,
-  data JSONB,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+-- CORRECT: Complete migration with indexes in same file
+-- File: src/db/migrations/008_add_audit_log.sql
+
+CREATE TABLE IF NOT EXISTS audit_log (
+  id SERIAL PRIMARY KEY,
+  organization_id TEXT NOT NULL,
+  action TEXT NOT NULL,
+  entity_type TEXT NOT NULL,
+  entity_id TEXT,
+  payload JSONB,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
--- Enable RLS (SAME FILE - MANDATORY)
-ALTER TABLE user_data ENABLE ROW LEVEL SECURITY;
+-- Index for query performance (MANDATORY for filter columns)
+CREATE INDEX IF NOT EXISTS idx_audit_log_org_id ON audit_log(organization_id);
+CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at);
 
--- User policy
-CREATE POLICY user_data_user_select ON user_data
-  FOR SELECT TO {{PROJECT}}_app_user
-  USING (user_id = current_setting('app.current_user_id', true));
-
--- Index for RLS performance (MANDATORY)
-CREATE INDEX idx_user_data_user_id ON user_data(user_id);
-
--- Grant permissions
-GRANT SELECT, INSERT, UPDATE ON user_data TO {{PROJECT}}_app_user;
+-- RLS (when enforced at DB level):
+-- ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY audit_log_org_isolation ON audit_log
+--   FOR ALL USING (organization_id = current_setting('app.current_org_id', true));
 ```
 
 ## Migration Workflow (MANDATORY)
@@ -86,40 +91,40 @@ Before ANY schema change:
 3. Only proceed after explicit approval
 ```
 
-### Step 2: Create Migration
+### Step 2: Create Migration File
 
 ```bash
-# For Prisma
-npx prisma migrate dev --name descriptive_name
+# Create a new SQL migration file
+# Use next available number, descriptive name
+touch src/db/migrations/008_add_audit_log.sql
 
-# For Alembic
-alembic revision --autogenerate -m "descriptive_name"
-
-# Verify migration file created
-ls {{MIGRATIONS_DIR}}/
+# Verify naming follows convention
+ls src/db/migrations/
+# Expected: 001_initial_schema.sql, 002_confluence_tokens.sql, ...
 ```
 
-### Step 3: Add RLS to Migration
+### Step 3: Write Migration SQL
 
-Edit the generated migration to include:
+Write the migration with:
 
-- [ ] `ALTER TABLE ... ENABLE ROW LEVEL SECURITY`
-- [ ] User SELECT policy
-- [ ] User INSERT policy (if applicable)
-- [ ] User UPDATE policy (if applicable)
-- [ ] Admin policies (if needed)
-- [ ] System policies (for background jobs)
-- [ ] Index on user_id column
-- [ ] GRANT statements
+- [ ] `CREATE TABLE IF NOT EXISTS` (idempotent)
+- [ ] All columns with types and constraints
+- [ ] Primary key defined
+- [ ] Indexes on filter/join columns
+- [ ] `CREATE INDEX IF NOT EXISTS` (idempotent)
+- [ ] RLS policies (as comments if not yet enforced)
 
 ### Step 4: Verify Locally
 
 ```bash
-# Test migration
-{{MIGRATION_RUN_COMMAND}}
+# Start the app -- migrations auto-run on startup
+npm run dev
 
-# Verify RLS is enabled
-psql -c "SELECT tablename, rowsecurity FROM pg_tables WHERE schemaname = 'public';"
+# Or run directly against PostgreSQL
+psql $DATABASE_URL -f src/db/migrations/008_add_audit_log.sql
+
+# Verify table created
+psql $DATABASE_URL -c "\dt"
 ```
 
 ### Step 5: Update Documentation
@@ -130,49 +135,14 @@ After successful migration:
 - [ ] Update RLS policy catalog if new policies added
 - [ ] Document in ticket
 
-## RLS Policy Templates
-
-### User Read Policy
-
-```sql
-CREATE POLICY {table}_user_select ON {table}
-  FOR SELECT TO {{PROJECT}}_app_user
-  USING (user_id = current_setting('app.current_user_id', true));
-```
-
-### User Write Policy
-
-```sql
-CREATE POLICY {table}_user_insert ON {table}
-  FOR INSERT TO {{PROJECT}}_app_user
-  WITH CHECK (user_id = current_setting('app.current_user_id', true));
-```
-
-### Admin Policy
-
-```sql
-CREATE POLICY {table}_admin_all ON {table}
-  FOR ALL TO {{PROJECT}}_app_user
-  USING (current_setting('app.user_role', true) = 'admin');
-```
-
-### System Policy (Background Jobs)
-
-```sql
-CREATE POLICY {table}_system_all ON {table}
-  FOR ALL TO {{PROJECT}}_app_user
-  USING (current_setting('app.context_type', true) = 'system');
-```
-
 ## Migration Checklist
 
 Before PR:
 
 - [ ] ARCHitect approval obtained
-- [ ] RLS policies in same migration file
-- [ ] User policies created
-- [ ] user_id index created
-- [ ] GRANT statements added
+- [ ] File named `XXX_description.sql` in `src/db/migrations/`
+- [ ] Uses `IF NOT EXISTS` for idempotency
+- [ ] Indexes on filter/join columns
 - [ ] Local migration test passed
 - [ ] DATA_DICTIONARY.md updated
 - [ ] Evidence attached to ticket
@@ -189,8 +159,7 @@ For production migrations:
 
 ## Authoritative References
 
-- **Migration SOP**: `docs/database/RLS_DATABASE_MIGRATION_SOP.md` (MANDATORY)
+- **Migration Runner**: `src/db/migrations/index.ts` (MANDATORY -- understand before creating)
+- **Existing Migrations**: `src/db/migrations/*.sql` (follow existing patterns)
 - **Data Dictionary**: `docs/database/DATA_DICTIONARY.md` (update after changes)
-- **RLS Implementation**: `docs/database/RLS_IMPLEMENTATION_GUIDE.md`
-- **RLS Policies**: `docs/database/RLS_POLICY_CATALOG.md`
 - **Security First**: `docs/guides/SECURITY_FIRST_ARCHITECTURE.md`

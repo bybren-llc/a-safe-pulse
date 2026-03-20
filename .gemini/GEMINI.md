@@ -34,8 +34,8 @@ Skills auto-load when context matches. All 17 skills:
 | `pattern-discovery` | Before implementing features |
 | `rls-patterns` | Database operations, RLS policies |
 | `api-patterns` | Creating API endpoints |
-| `frontend-patterns` | UI components, pages |
-| `testing-patterns` | Writing tests |
+| `frontend-patterns` | CLI interface work |
+| `testing-patterns` | Writing tests (Jest) |
 | `security-audit` | Security validation |
 | `linear-sop` | Ticket management |
 | `deployment-sop` | Deploying code |
@@ -44,7 +44,7 @@ Skills auto-load when context matches. All 17 skills:
 | `spec-creation` | Writing SAFe specs (Epic/Feature/Story) |
 | `release-patterns` | Release management, versioning |
 | `git-advanced` | Rebasing, cherry-pick, conflict resolution |
-| `stripe-patterns` | Payment integration, webhooks |
+| `webhook-patterns` | Webhook handling, event processing |
 | `confluence-docs` | Confluence documentation, templates |
 | `migration-patterns` | Database migrations, schema changes |
 
@@ -131,12 +131,16 @@ Example: `feat(user): add profile editing [ASP-123]`
 
 ```typescript
 // CORRECT - Always use context helpers
-const user = await withUserContext(prisma, userId, async (client) => {
-  return client.user.findUnique({ where: { user_id: userId } });
+const user = await withUserContext(pool, userId, async (client) => {
+  const result = await client.query(
+    'SELECT * FROM users WHERE user_id = $1',
+    [userId]
+  );
+  return result.rows[0];
 });
 
-// FORBIDDEN - Direct Prisma calls bypass RLS
-const user = await prisma.user.findUnique({ where: { user_id } }); // NEVER DO THIS
+// FORBIDDEN - Direct pool/client queries bypass RLS
+const result = await pool.query('SELECT * FROM users WHERE user_id = $1', [userId]); // NEVER DO THIS
 ```
 
 Context helpers:
@@ -174,7 +178,7 @@ While Gemini doesn't have discrete agents, embody these roles as needed:
 
 **Immediately stop and escalate if you encounter:**
 
-1. **Direct Prisma calls** - Must use RLS context helpers
+1. **Direct database calls** - Must use RLS context helpers
 2. **Missing AC/DoD** - Route to BSA before implementation
 3. **Security vulnerabilities** - Hardcoded secrets, SQL injection
 4. **Architecture changes without approval** - Get ARCHitect sign-off

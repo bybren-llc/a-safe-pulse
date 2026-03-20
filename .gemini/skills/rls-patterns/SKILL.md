@@ -1,6 +1,6 @@
 ---
 name: rls-patterns
-description: Row Level Security patterns for database operations. Use when writing Prisma/database code, creating API routes that access data, or implementing webhooks. Enforces withUserContext, withAdminContext, or withSystemContext helpers. NEVER use direct prisma calls.
+description: Row Level Security patterns for database operations. Use when writing database queries, creating Express API routes that access data, or implementing webhooks. This project uses direct pg (node-postgres) queries with raw SQL -- no ORM.
 ---
 
 # RLS Patterns Skill
@@ -9,73 +9,97 @@ description: Row Level Security patterns for database operations. Use when writi
 
 Enforce Row Level Security (RLS) patterns for all database operations. Ensures data isolation and prevents cross-user data access.
 
+## Current Tech Stack
+
+- **Database**: PostgreSQL (production) via `pg` (node-postgres) -- direct SQL queries
+- **Dev Database**: SQLite via `SQLITE_DB_PATH` for local development
+- **Connection**: `src/db/connection.ts` exports `query()` and `getClient()`
+- **Migrations**: Raw SQL files in `src/db/migrations/` (auto-run on startup)
+- **No ORM**: Direct SQL queries only (no ORM)
+
 ## When This Skill Applies
 
-- Writing any Prisma database query
-- Creating or modifying API routes that access the database
+- Writing any database query (raw SQL via `query()` or `getClient()`)
+- Creating or modifying Express API routes that access the database
 - Implementing webhook handlers
-- Working with user data, payments, subscriptions
+- Working with user data, tokens, planning sessions
 
 ## Critical Rules
 
 ### NEVER Do This
 
 ```typescript
-// ❌ FORBIDDEN - Direct Prisma calls bypass RLS
-const user = await prisma.user.findUnique({ where: { user_id } });
+// FORBIDDEN - String interpolation is SQL injection risk
+const result = await query(`SELECT * FROM linear_tokens WHERE org_id = '${orgId}'`);
+
+// FORBIDDEN - Unscoped queries expose all rows
+const tokens = await query('SELECT * FROM linear_tokens');
 ```
 
 ### ALWAYS Do This
 
 ```typescript
-import { withUserContext, withAdminContext, withSystemContext } from "@/lib/rls-context";
+import { query, getClient } from '../db/connection';
 
-// ✅ CORRECT - User context for user operations
-const user = await withUserContext(prisma, userId, async (client) => {
-  return client.user.findUnique({ where: { user_id: userId } });
-});
+// CORRECT - Parameterized queries prevent SQL injection
+const result = await query(
+  'SELECT * FROM linear_tokens WHERE organization_id = $1',
+  [orgId]
+);
 
-// ✅ CORRECT - System context for webhooks
-await withSystemContext(prisma, "webhook", async (client) => {
-  return client.webhook_events.create({ data: eventData });
-});
-```
-
-## Context Helper Reference
-
-| Helper | Use For |
-| ------ | ------- |
-| `withUserContext` | User-facing operations (profile, payments, subscriptions) |
-| `withAdminContext` | Admin-only operations (disputes, webhook events) |
-| `withSystemContext` | Webhooks and background jobs |
-
-## Common Patterns
-
-### API Route with User Context
-
-```typescript
-export async function GET() {
-  const { userId } = await requireAuth();
-
-  const payments = await withUserContext(prisma, userId, async (client) => {
-    return client.payments.findMany({
-      where: { user_id: userId },
-      orderBy: { created_at: "desc" },
-    });
-  });
-
-  return NextResponse.json(payments);
+// CORRECT - Transactions with proper error handling
+const client = await getClient();
+try {
+  await client.query('BEGIN');
+  await client.query(
+    'INSERT INTO planning_sessions (id, org_id, status) VALUES ($1, $2, $3)',
+    [sessionId, orgId, 'active']
+  );
+  await client.query('COMMIT');
+} catch (error) {
+  await client.query('ROLLBACK');
+  throw error;
+} finally {
+  client.release();
 }
 ```
 
-### Admin Pages: Force Dynamic
+## RLS Architecture
+
+### Current State
+
+Application-level data isolation via WHERE clauses filtering by `organization_id` or session ownership. The `query()` and `getClient()` helpers in `src/db/connection.ts` provide database access.
+
+### Target Architecture
+
+When PostgreSQL RLS policies are introduced, session variables (`SET app.current_user_id`) and RLS policies will enforce row-level filtering automatically.
+
+## Common Patterns
+
+### Express Route with Data Isolation
 
 ```typescript
-// REQUIRED for admin pages with RLS
-export const dynamic = "force-dynamic";
+import { Router, Request, Response } from 'express';
+import { query } from '../db/connection';
+
+const router = Router();
+
+router.get('/api/planning/:orgId/sessions', async (req: Request, res: Response) => {
+  try {
+    const { orgId } = req.params;
+    const result = await query(
+      'SELECT * FROM planning_sessions WHERE org_id = $1 ORDER BY created_at DESC',
+      [orgId]
+    );
+    res.json({ data: result.rows });
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 ```
 
 ## Reference
 
-- **Implementation Guide**: `docs/database/RLS_IMPLEMENTATION_GUIDE.md`
-- **Policy Catalog**: `docs/database/RLS_POLICY_CATALOG.md`
+- **DB Connection**: `src/db/connection.ts`
+- **Migrations**: `src/db/migrations/` (raw SQL, auto-run on startup)
+- **Security Guide**: `docs/guides/SECURITY_FIRST_ARCHITECTURE.md`

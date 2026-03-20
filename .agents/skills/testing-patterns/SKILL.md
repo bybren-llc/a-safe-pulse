@@ -1,12 +1,14 @@
 ---
 name: testing-patterns
 description: >
-  Testing patterns for unit, integration, and end-to-end tests. Use when
-  writing tests, setting up test fixtures, or validating RLS enforcement.
-  Routes to existing test conventions.
+  Testing patterns for Jest unit and integration tests. Use when writing tests,
+  setting up test fixtures, or validating implementations. Jest only -- no
+  no E2E framework. Tests live in `tests/` directory.
 ---
 
 # Testing Patterns Skill
+
+> **TEMPLATE**: This skill uses `{{PLACEHOLDER}}` tokens. Replace with your project values before use.
 
 ## Purpose
 
@@ -15,7 +17,7 @@ Guide consistent and effective testing. Routes to existing test patterns and pro
 ## When This Skill Applies
 
 - Writing unit or integration tests
-- Setting up test fixtures with RLS
+- Setting up test fixtures
 - Running test suites
 - Packaging test evidence
 
@@ -24,25 +26,20 @@ Guide consistent and effective testing. Routes to existing test patterns and pro
 ### FORBIDDEN
 
 ```typescript
-// Direct Prisma calls bypass RLS
-const user = await prisma.user.findUnique({ where: { user_id } });
-
 // Shared test state causes flaky tests
-let sharedUser: User;
-beforeAll(() => { sharedUser = createUser(); });
+let sharedData: any;
+beforeAll(() => { sharedData = createData(); });
+
+// Hard-coded IDs cause test pollution
+const userId = "user-123";
 ```
 
 ### CORRECT
 
 ```typescript
-// Use RLS context helpers
-const user = await withSystemContext(prisma, "test", async (client) => {
-  return client.user.findUnique({ where: { user_id } });
-});
-
-// Isolated test state
+// Isolated test state per test
 beforeEach(() => {
-  const testUser = createTestUser();
+  const testData = createTestData();
 });
 
 // Unique identifiers
@@ -52,20 +49,28 @@ const userId = `user-${crypto.randomUUID()}`;
 ## Test Commands
 
 ```bash
-{{TEST_UNIT_COMMAND}}        # Unit tests
-{{TEST_INTEGRATION_COMMAND}} # Integration tests
-{{TEST_E2E_COMMAND}}         # E2E tests (Playwright)
-{{CI_VALIDATE_COMMAND}}      # Full validation
+npm test                              # Run all tests
+npx jest tests/specific-file.test.ts  # Run a single test file
+npx jest --testPathPattern="keyword"  # Run tests matching pattern
+npm test -- --coverage                # Run with coverage
 ```
+
+## Coverage Thresholds
+
+| Metric     | Threshold |
+| ---------- | --------- |
+| Branches   | 70%       |
+| Functions  | 80%       |
+| Lines      | 80%       |
+| Statements | 80%       |
 
 ## Test Directory Structure
 
 ```
-__tests__/
+tests/
 ├── unit/              # Fast, isolated tests
 ├── integration/       # API and database tests
-├── e2e/               # End-to-end tests
-└── setup.ts           # Global setup
+└── setup.ts           # Global test setup (if any)
 ```
 
 ## Evidence Template
@@ -73,7 +78,7 @@ __tests__/
 ```markdown
 **Test Execution Evidence**
 
-**Test Suite**: [unit/integration/e2e]
+**Test Suite**: [unit/integration]
 **Files Changed**: [list files]
 
 **Test Results:**
@@ -81,14 +86,20 @@ __tests__/
 - Passed: [X]
 - Failed: [0]
 
+**Coverage** (if applicable):
+- Branches: X% (threshold: 70%)
+- Functions: X% (threshold: 80%)
+- Lines: X% (threshold: 80%)
+- Statements: X% (threshold: 80%)
+
 **Commands Run:**
 ```bash
-{{TEST_UNIT_COMMAND}} --coverage
+npm test -- --coverage
 ```
 ```
 
 ## Reference
 
 - **Jest Config**: `jest.config.js`
-- **RLS Context**: `lib/rls-context.ts`
+- **Test Directory**: `tests/`
 - **Pattern Library**: `patterns_library/testing/`

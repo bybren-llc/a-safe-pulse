@@ -43,8 +43,8 @@ Before ANY deployment:
 
 ```bash
 # Validate before deploy
-yarn ci:validate
-yarn build
+npm test && npm run build
+npm run build
 ```
 
 ## Post-Deployment Smoke Test
@@ -55,7 +55,7 @@ After deployment completes:
 - [ ] Database connection verified (check health response)
 - [ ] Authentication flow works (sign-in/sign-up)
 - [ ] Critical user flows functional
-- [ ] No new errors in logs (PostHog/Coolify)
+- [ ] No new errors in logs (application monitoring)
 
 ```bash
 # Smoke test commands
@@ -98,7 +98,7 @@ curl -s https://{domain}/api/health
 
 If deployment fails:
 
-1. **Identify failure** - Check Coolify logs, PostHog errors
+1. **Identify failure** - Check Coolify logs, application errors
 2. **Revert commit** - `git revert {commit_sha}`
 3. **Push revert** - Triggers automatic rollback deployment
 4. **Verify rollback** - Run smoke tests again

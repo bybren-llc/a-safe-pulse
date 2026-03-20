@@ -1,19 +1,19 @@
 ---
-description: "Database rules for PostgreSQL 16, Alembic migrations, SQLAlchemy models, and Row Level Security."
-globs: "alembic/**,**/models.py,**/schemas.py,**/models/**"
+description: "Database rules for PostgreSQL, raw SQL migrations, and Row Level Security."
+globs: "src/db/**,src/db/migrations/**"
 alwaysApply: false
 ---
 
 # Database and SQL Rules
 
-These rules apply when working on database models, schemas, and migrations.
+These rules apply when working on database schemas, queries, and migrations.
 
 ## Technology
 
-- **Database**: PostgreSQL 16
-- **ORM**: SQLAlchemy 2.x
-- **Migrations**: Alembic
-- **RLS**: Row Level Security (MANDATORY)
+- **Database**: PostgreSQL (production), SQLite (development)
+- **ORM**: None -- direct `pg` queries
+- **Migrations**: Raw SQL files in `src/db/migrations/`
+- **RLS**: Row Level Security (MANDATORY for target architecture)
 
 ## Row Level Security (RLS)
 
@@ -25,13 +25,13 @@ Every database operation MUST use the appropriate context helper:
 
 | Helper                | Use Case                     |
 |-----------------------|------------------------------|
-| `with_user_context`   | User-scoped operations       |
-| `with_admin_context`  | Admin-scoped operations      |
-| `with_system_context` | Background/webhook operations|
+| `withUserContext`     | User-scoped operations       |
+| `withAdminContext`    | Admin-scoped operations      |
+| `withSystemContext`   | Background/webhook operations|
 
 ### Zero Tolerance
 
-- No direct session/ORM calls without RLS context wrappers
+- No direct query calls without RLS context wrappers
 - No bypassing RLS policies for convenience
 - No using superuser credentials in application code
 
@@ -45,33 +45,36 @@ After any schema change, validate RLS:
 ## Migration Workflow
 
 ```bash
-# 1. Create migration
-alembic revision --autogenerate -m "description"
+# 1. Create a new migration file
+# Use the next sequential number: XXX_description.sql
+touch src/db/migrations/008_add_new_table.sql
 
-# 2. REVIEW the generated migration (do not blindly apply)
-# 3. Add RLS policies if new table created
-# 4. Test locally
-alembic upgrade head
+# 2. Write the migration SQL (CREATE TABLE, ALTER TABLE, etc.)
+# 3. Add RLS policies if new table contains user data
+# 4. Register the migration in src/db/migrations/index.ts
+# 5. Test locally
+npm run dev
 
-# 5. Commit
-git add alembic/versions/
+# 6. Commit
+git add src/db/migrations/
 git commit -m "feat(db): description [ASP-XXX]"
 ```
 
 ### Migration Rules
 
 - Never use `DROP TABLE` without a backup strategy
-- Never skip Alembic (no manual DDL in production)
+- Never apply manual DDL in production outside of migrations
 - Always add proper indexes for query patterns
 - Add RLS policies for every new table with user data
 - Schema changes REQUIRE System Architect approval
+- Follow naming convention: `XXX_description.sql` (e.g., `008_add_audit_log.sql`)
 
-## SQLAlchemy Model Standards
+## Query Standards
 
-- Use SQLAlchemy 2.x `Mapped` type annotations
-- Define relationships explicitly
+- Use parameterized queries to prevent SQL injection
 - Include `created_at` and `updated_at` timestamps on all tables
-- Use UUIDs for primary keys
+- Use explicit column lists in SELECT statements (avoid `SELECT *`)
+- Handle connection pooling properly via the `pg` client
 
 ## Key References
 
@@ -79,4 +82,3 @@ git commit -m "feat(db): description [ASP-XXX]"
 - `docs/database/RLS_DATABASE_MIGRATION_SOP.md` -- Migration SOP (MANDATORY reading)
 - `docs/database/RLS_IMPLEMENTATION_GUIDE.md` -- RLS implementation details
 - `patterns_library/database/rls-migration.md` -- RLS migration pattern
-- `patterns_library/database/prisma-transaction.md` -- Transaction pattern

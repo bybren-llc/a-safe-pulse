@@ -51,12 +51,12 @@ Test PostgreSQL connection:
 ssh -i {SSH_KEY_PATH} {REMOTE_USER}@{REMOTE_HOST} "docker exec {DB_CONTAINER} pg_isready -U {DB_USER}"
 ```
 
-### 5. Redis/Cache Connectivity
+### 5. Cache/Cache Connectivity
 
-Test Redis connection:
+Test Cache connection:
 
 ```bash
-ssh -i {SSH_KEY_PATH} {REMOTE_USER}@{REMOTE_HOST} "docker exec {REDIS_CONTAINER} redis-cli ping"
+ssh -i {SSH_KEY_PATH} {REMOTE_USER}@{REMOTE_HOST} "docker exec {REDIS_CONTAINER} app-cache-cli ping"
 ```
 
 Expected: `PONG`
@@ -87,13 +87,13 @@ Remote Dev Environment Health Dashboard
 Container Health:
 {PROJECT}-app            Healthy  Up 2 hours
 {PROJECT}-postgres       Healthy  Up 2 hours
-{PROJECT}-redis          Healthy  Up 2 hours
+{PROJECT}-app-cache          Healthy  Up 2 hours
 
 Resource Usage:
 Container               CPU      Memory
 {PROJECT}-app          2.45%    312MB / 2GB  (15%)
 {PROJECT}-postgres     0.12%    45MB / 2GB   (2%)
-{PROJECT}-redis        0.08%    8MB / 2GB    (0%)
+{PROJECT}-app-cache        0.08%    8MB / 2GB    (0%)
 
 Disk Space:            125GB / 250GB (50% used)
 
@@ -109,7 +109,7 @@ Overall Status: HEALTHY
 | Resource usage < 80%      | +15    |
 | No recent errors          | +15    |
 | Response time < 500ms     | +10    |
-| Database/Redis responding | +10    |
+| Database/Cache responding | +10    |
 
 **Score Interpretation**:
 - 90-100: Excellent

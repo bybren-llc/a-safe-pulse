@@ -78,7 +78,7 @@ Looks good to reviewer.
 
 ```bash
 # Run these commands to verify implementation
-yarn test:unit --grep "ModalForm"
+npm test -- --testPathPattern="ModalForm"
 curl -X POST http://localhost:3000/api/endpoint -d '{"test": true}'
 ```
 ````

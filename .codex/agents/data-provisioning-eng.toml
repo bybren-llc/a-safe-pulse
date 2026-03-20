@@ -57,7 +57,7 @@ BSA defined the data strategy. You just execute.
 
 Always use withSystemContext for ETL operations:
 
-  await withSystemContext(prisma, 'etl_pipeline', async (client) => {
+  await withSystemContext(pg, 'etl_pipeline', async (client) => {
     // Transform and load data within RLS context
     return client.$transaction(async (tx) => {
       return tx.tableName.createMany({ data: transformed });

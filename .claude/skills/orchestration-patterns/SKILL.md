@@ -41,7 +41,7 @@ Invoke this skill when:
 │     ┌─────────────────────────────────────────────┐     │
 │     │  Implement approach                         │     │
 │     │       ↓                                     │     │
-│     │  Run validation (yarn ci:validate)          │     │
+│     │  Run validation (npm test && npm run build)          │     │
 │     │       ↓                                     │     │
 │     │  If PASS → proceed to evidence              │     │
 │     │  If FAIL → analyze error, adjust, repeat    │     │
@@ -65,7 +65,7 @@ Invoke this skill when:
 
 | Type           | What It Proves             | Example                    |
 | -------------- | -------------------------- | -------------------------- |
-| Test Results   | Code works as expected     | `yarn ci:validate` output  |
+| Test Results   | Code works as expected     | `npm test && npm run build` output  |
 | Screenshots    | UI changes are correct     | Before/after comparison    |
 | Command Output | Operations completed       | Build logs, migration logs |
 | QAS Report     | Independent verification   | QA validation markdown     |
@@ -194,7 +194,7 @@ At session boundaries:
 
 3. [Implementation with agent loop]
    ├─ Implement
-   ├─ Validate (yarn ci:validate)
+   ├─ Validate (npm test && npm run build)
    ├─ Adjust if needed
    └─ Repeat until passing
 

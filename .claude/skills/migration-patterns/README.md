@@ -3,12 +3,12 @@
 ![Status](https://img.shields.io/badge/status-production-green)
 ![Harness](https://img.shields.io/badge/harness-v2.10.0-blue)
 
-> Database migration creation with mandatory RLS policies and ARCHitect approval workflow.
+> Database migration creation with raw SQL files and ARCHitect approval workflow.
 
 ## License
 
 **License:** MIT (see [/LICENSE](/LICENSE))
-**Copyright:** © 2026 J. Scott Graham ([@cheddarfox](https://github.com/cheddarfox)) / [ByBren, LLC](https://github.com/bybren-llc)
+**Copyright:** (c) 2026 J. Scott Graham ([@cheddarfox](https://github.com/cheddarfox)) / [ByBren, LLC](https://github.com/bybren-llc)
 **Attribution:** Required per [/NOTICE](/NOTICE)
 
 ## Intellectual Property
@@ -19,33 +19,32 @@ The skill system architecture and ASP harness methodology are the intellectual p
 
 This skill activates automatically when you:
 - Create database migrations
-- Add new tables (all tables need RLS)
-- Update Prisma schema
+- Add new tables or alter schemas
 - Plan data migrations
 
 ## What This Skill Does
 
-Guides database migration creation with mandatory RLS policies following security-first architecture. Ensures all new tables have proper RLS policies in the same migration file and enforces ARCHitect approval for schema changes.
+Guides database migration creation using raw SQL files in `src/db/migrations/` with `XXX_description.sql` naming convention. Migrations are registered in `src/db/migrations/index.ts` and auto-run on startup. Enforces ARCHitect approval for schema changes.
 
 ## Trigger Keywords
 
 | Primary | Secondary |
 |---------|-----------|
 | migration | schema |
-| database | prisma |
-| table | GRANT |
-| RLS policy | data migration |
+| database | table |
+| SQL | GRANT |
+| index | data migration |
 
 ## Related Skills
 
-- [rls-patterns](../rls-patterns/) - RLS implementation patterns
+- [rls-patterns](../rls-patterns/) - Database query patterns
 - [security-audit](../security-audit/) - Security validation
 
 ## Maintenance
 
 | Field | Value |
 |-------|-------|
-| Last Updated | 2026-01-04 |
+| Last Updated | 2026-03-19 |
 | Harness Version | v2.10.0 |
 
 ---
