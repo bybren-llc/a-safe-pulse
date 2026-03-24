@@ -82,7 +82,7 @@
       "category": "implementation",
       "description": "Schema changes, migrations, database architecture",
       "collapsible": true,
-      "primary_tools": ["prisma", "sql", "migration-tools"],
+      "primary_tools": ["pg", "sql", "raw-sql-migrations"],
       "exit_state": "Ready for QAS",
       "validation_command": "npm run build"
     },
@@ -122,7 +122,7 @@
       "category": "quality",
       "description": "Test data, database access, data validation",
       "collapsible": true,
-      "primary_tools": ["sql", "prisma-studio", "scripts"],
+      "primary_tools": ["sql", "psql", "scripts"],
       "exit_state": null
     },
     "rte": {

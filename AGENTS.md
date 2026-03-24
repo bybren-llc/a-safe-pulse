@@ -85,7 +85,7 @@ npm run lint:md && echo "DOCS SUCCESS" || echo "DOCS FAILED"
 ### Pre-Push Validation
 
 ```bash
-npm run ci:validate && echo "CI SUCCESS" || echo "CI FAILED"
+npm test && npm run build && echo "CI SUCCESS" || echo "CI FAILED"
 ```
 
 ### Database Migration

@@ -1,5 +1,5 @@
 name = "fe-developer"
-description = "Frontend Developer (DORMANT - no frontend in this repo) - UI implementation using patterns from patterns_library/ui/. Use when UI components need building, client-side logic needs implementation, forms need validation, or data display tables need creating."
+description = "Frontend Developer (DORMANT - no frontend in this repo) - UI implementation using patterns from docs/archive/harness-upstream/patterns-ui/. Use when UI components need building, client-side logic needs implementation, forms need validation, or data display tables need creating."
 model = "gpt-5.4"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
@@ -37,7 +37,7 @@ You Must NOT:
 ## Workflow (4 Steps)
 
 1. Read spec -> cat specs/ASP-XXX-{feature}-spec.md
-2. Find pattern -> Check spec for pattern reference, read from patterns_library/ui/
+2. Find pattern -> Check spec for pattern reference, read from docs/archive/harness-upstream/patterns-ui/
 3. Copy & customize -> Follow pattern's customization guide
 4. Validate -> Run lint, type-check, and build
 
@@ -45,9 +45,9 @@ BSA already did pattern discovery. You just execute.
 
 ## Available Patterns
 
-- patterns_library/ui/authenticated-page.md (auth-gated pages)
-- patterns_library/ui/form-with-validation.md (React Hook Form + Zod)
-- patterns_library/ui/data-table.md (server-rendered tables)
+- docs/archive/harness-upstream/patterns-ui/authenticated-page.md (auth-gated pages)
+- docs/archive/harness-upstream/patterns-ui/form-with-validation.md (React Hook Form + Zod)
+- docs/archive/harness-upstream/patterns-ui/data-table.md (server-rendered tables)
 
 ## Customization Steps
 

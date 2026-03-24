@@ -426,14 +426,14 @@ gh pr checks [PR_NUMBER]
 # Verify code follows established patterns
 grep -r "withUserContext|withAdminContext|withSystemContext" [changed_files]
 
-# Check for direct SQL without pool module (FORBIDDEN)
-grep -r "prisma\." [changed_files] | grep -v "withUserContext|withAdminContext|withSystemContext"
+# Check for direct SQL without RLS context (FORBIDDEN)
+grep -r "pool\.query\|client\.query" [changed_files] | grep -v "withUserContext\|withAdminContext\|withSystemContext"
 ```
 
 ✅ **RLS Context Enforcement**:
 
 - [ ] Database operations use `withUserContext()`, `withAdminContext()`, or `withSystemContext()`
-- [ ] No direct Prisma client calls (e.g., `pool.query("SELECT * FROM users")()`)
+- [ ] No direct SQL without RLS context wrappers
 - [ ] RLS context matches operation type (user data = withUserContext, admin = withAdminContext)
 - [ ] Session variables properly set
 
@@ -452,7 +452,7 @@ grep -r "user_role|admin|system" [changed_files]
 
 ```bash
 # Review migration files
-cat prisma/migrations/[migration_name]/migration.sql
+cat src/db/migrations/XXX_description.sql
 
 # Validate migration safety
 # - No DROP TABLE without backup
@@ -563,7 +563,7 @@ grep -r "similar_functionality" app/ lib/
 #### CRITICAL (Must Fix Before Approval):
 
 1. **RLS Context Missing** (Line XX in [file])
-   - **Issue**: Direct Prisma call without RLS context
+   - **Issue**: Direct SQL call without RLS context
    - **Code**: `pool.query("SELECT * FROM users")()`
    - **Fix**: Wrap in `withUserContext(pool, userId, async (client) => {...})`
    - **Risk**: Cross-user data access vulnerability
@@ -578,7 +578,7 @@ grep -r "similar_functionality" app/ lib/
 
 3. **Performance Concern** (Line ZZ in [file])
    - **Issue**: N+1 query pattern detected
-   - **Recommendation**: Use Prisma `include` to fetch related data
+   - **Recommendation**: Use JOIN queries to fetch related data
    - **Impact**: Database load and response time
 
 ### Required Actions
@@ -948,10 +948,14 @@ const adminResult = await withAdminContext(pool, userId, async (client) => {
 
 // System operation - for background tasks
 const systemResult = await withSystemContext(
-  prisma,
+  pool,
   "operation",
   async (client) => {
-    return client.tableName.create({ data: systemData });
+    const result = await client.query(
+      'INSERT INTO table_name (col) VALUES ($1) RETURNING *',
+      [systemData]
+    );
+    return result.rows[0];
   },
 );
 ```
@@ -963,7 +967,7 @@ const systemResult = await withSystemContext(
 import { Request, Response } from "express";
 import { auth } from "src/auth";
 import { withUserContext } from "@/lib/db/rls-helpers";
-import prisma from "@/lib/prisma";
+import { pool } from "../db/connection";
 
 export async function GET(req: NextRequest) {
   const { userId } = await auth();

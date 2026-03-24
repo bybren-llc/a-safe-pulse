@@ -99,7 +99,7 @@ BE Developer teammate:
 FE Developer teammate:
 - Load: frontend-patterns skill
 - Task: Implement UI per spec
-- Constraint: Follow component patterns in patterns_library/ui/
+- Constraint: Follow API patterns in patterns_library/api/
 
 QAS teammate:
 - Load: testing-patterns skill

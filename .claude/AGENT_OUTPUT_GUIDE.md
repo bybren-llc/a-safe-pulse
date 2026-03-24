@@ -57,7 +57,7 @@ These paths are hardcoded across 80+ files. **DO NOT MODIFY THESE LOCATIONS**:
 - `/patterns_library/api/` - API route patterns
 - `/patterns_library/database/` - Database migration patterns
 - `/patterns_library/testing/` - Test implementation patterns
-- `/patterns_library/ui/` - UI component patterns
+- `/patterns_library/api/` - API route patterns
 
 ### Quality Reports (Legacy)
 

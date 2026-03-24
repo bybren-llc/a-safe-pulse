@@ -55,7 +55,7 @@ The following skills are available and will auto-activate when relevant:
 **Your workflow in 4 steps:**
 
 1. **Read spec** → `cat specs/ASP-XXX-{feature}-spec.md`
-2. **Find pattern** → Check spec for pattern reference, read from `patterns_library/ui/`
+2. **Find pattern** → Check spec for pattern reference, read from `docs/archive/harness-upstream/patterns-ui/`
 3. **Copy & customize** → Follow pattern's customization guide
 4. **Validate** → Run `npx tsc --noEmit && npx tsc --noEmit && npm run build`
 
@@ -84,10 +84,10 @@ grep -A 3 "Pattern:" specs/ASP-XXX-{feature}-spec.md
 
 ```bash
 # BSA tells you which pattern to use
-cat patterns_library/ui/{pattern-name}.md
+cat docs/archive/harness-upstream/patterns-ui/{pattern-name}.md
 
 # Available UI patterns:
-ls patterns_library/ui/
+ls docs/archive/harness-upstream/patterns-ui/
 # - authenticated-page.md
 # - form-with-validation.md
 # - data-table.md
@@ -146,7 +146,7 @@ npm run build  # Ensures production build works
 
 ```bash
 # For new UI components, BSA will reference a pattern
-cat patterns_library/ui/{pattern}.md
+cat docs/archive/harness-upstream/patterns-ui/{pattern}.md
 
 # Follow the pattern exactly
 # Customize only what spec requires
@@ -156,7 +156,7 @@ cat patterns_library/ui/{pattern}.md
 
 ```bash
 # BSA will reference form-with-validation.md
-cat patterns_library/ui/form-with-validation.md
+cat docs/archive/harness-upstream/patterns-ui/form-with-validation.md
 
 # Pattern includes:
 # - React Hook Form setup
@@ -169,7 +169,7 @@ cat patterns_library/ui/form-with-validation.md
 
 ```bash
 # For tables, BSA references data-table.md
-cat patterns_library/ui/data-table.md
+cat docs/archive/harness-upstream/patterns-ui/data-table.md
 
 # Pattern includes:
 # - Server-side rendering

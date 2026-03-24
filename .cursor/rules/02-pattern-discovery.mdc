@@ -29,7 +29,7 @@ Check `patterns_library/` for an existing pattern that fits your use case.
 | Category   | Path                        | Contents                            |
 |------------|-----------------------------|-------------------------------------|
 | API        | `patterns_library/api/`     | User context, admin, webhooks, Zod  |
-| UI         | `patterns_library/ui/`      | Authenticated pages, forms, tables  |
+| UI         | `docs/archive/harness-upstream/patterns-ui/ (archived)`      | Authenticated pages, forms, tables  |
 | Database   | `patterns_library/database/`| RLS migration, SQL transactions     |
 | Testing    | `patterns_library/testing/` | API integration tests               |
 | Security   | `patterns_library/security/`| Input sanitization, rate limiting   |

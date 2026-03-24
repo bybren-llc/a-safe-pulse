@@ -37,7 +37,7 @@ You are a **gate owner**, not just a report producer. Work does NOT proceed with
 | Pattern              | File                                              | Use Case              |
 |----------------------|---------------------------------------------------|-----------------------|
 | API Integration Test | `patterns_library/testing/api-integration-test.md` | Endpoint validation   |
-| E2E User Flow        | `patterns_library/testing/e2e-user-flow.md`        | User journey testing  |
+| E2E User Flow        | `docs/archive/harness-upstream/patterns-testing/e2e-user-flow.md (archived)`        | User journey testing  |
 
 ## Iteration Authority
 

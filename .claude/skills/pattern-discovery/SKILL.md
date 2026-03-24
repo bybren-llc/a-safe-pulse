@@ -34,7 +34,7 @@ Search `patterns_library/` for existing patterns:
 ```bash
 # Find patterns by category
 ls patterns_library/api/      # API route patterns
-ls patterns_library/ui/       # UI component patterns
+# UI patterns archived (see docs/archive/harness-upstream/patterns-ui/)
 ls patterns_library/database/ # Database operation patterns
 ls patterns_library/testing/  # Testing patterns
 ```
