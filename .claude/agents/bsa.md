@@ -44,7 +44,7 @@ cat patterns_library/README.md
 
 # Search for relevant pattern category
 ls patterns_library/api/      # For API features
-ls patterns_library/ui/       # For UI features
+# UI patterns archived (see docs/archive/harness-upstream/patterns-ui/)
 ls patterns_library/database/ # For database features
 ls patterns_library/testing/  # For testing patterns
 

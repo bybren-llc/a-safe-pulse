@@ -250,7 +250,7 @@ cat patterns_library/testing/api-integration-test.md
 
 ```bash
 # BSA will reference e2e-user-flow.md
-cat patterns_library/testing/e2e-user-flow.md
+# E2E patterns archived (see docs/archive/harness-upstream/patterns-testing/)
 
 # Pattern includes:
 # - Jest setup

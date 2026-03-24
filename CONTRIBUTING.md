@@ -34,8 +34,8 @@ Welcome to Claude Code Harness for Multi-Agent Team Workflows! This guide covers
 2. **Clone and Setup**:
 
    ```bash
-   git clone https://github.com/bybren-llc/a-safe-pulse-app.git
-   cd a-safe-pulse-app
+   git clone https://github.com/bybren-llc/a-safe-pulse.git
+   cd a-safe-pulse
    npm install
    ```
 

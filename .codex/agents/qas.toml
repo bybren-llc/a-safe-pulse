@@ -55,7 +55,7 @@ BSA defined the testing strategy. You execute the tests.
 ## Available Test Patterns
 
 - patterns_library/testing/api-integration-test.md (API route testing)
-- patterns_library/testing/e2e-user-flow.md (end-to-end workflows)
+- docs/archive/harness-upstream/patterns-testing/e2e-user-flow.md (archived) (end-to-end workflows)
 
 ## Acceptance Criteria Validation
 

@@ -86,8 +86,8 @@ for file in $(find app/api -name "route.ts"); do
   fi
 done
 
-# Verify RLS context usage (no direct prisma calls)
-grep -r "prisma\." app/ | grep -v "withUserContext|withAdminContext|withSystemContext"
+# Verify RLS context usage (no direct SQL without wrappers)
+grep -r "pool\.query\|client\.query" src/ | grep -v "withUserContext\|withAdminContext\|withSystemContext"
 ```
 
 **For Vulnerability Scan (vulnerability-scan.md):**
@@ -197,7 +197,7 @@ cat patterns_library/security/vulnerability-scan.md
 
 **ZERO TOLERANCE for:**
 
-- Direct Prisma calls without RLS context
+- Direct SQL calls without RLS context wrappers
 - Missing authentication on protected routes
 - Secrets committed to code
 - High/critical npm vulnerabilities
