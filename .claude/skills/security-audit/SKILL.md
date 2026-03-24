@@ -144,7 +144,7 @@ npm audit --audit-level=high
 
 ```bash
 # Complete security check
-npm audit && npm run lint && echo "Security checks passed"
+npm audit && npm run build && echo "Security checks passed"
 
 # SQL injection vulnerability detection
 grep -rn '\${' --include="*.ts" src/ | grep -i 'query\|sql'

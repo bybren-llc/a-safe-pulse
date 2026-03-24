@@ -150,8 +150,8 @@ ls patterns_library/
 # For BE: Check API patterns
 cat patterns_library/api/user-context-api.md 2>/dev/null
 
-# For FE: Check frontend patterns
-cat patterns_library/ui/form-with-validation.md 2>/dev/null
+# For API validation: Check Zod patterns
+cat patterns_library/api/zod-validation-api.md 2>/dev/null
 
 # For database operations: Check RLS patterns
 cat patterns_library/database/rls-migration.md 2>/dev/null
@@ -197,10 +197,10 @@ Follow the spec's low-level tasks as your implementation guide. The BSA has alre
 - [ ] Write unit tests alongside implementation
 - [ ] Reference the Data Dictionary for schema questions
 
-**Frontend Developer Checklist**:
+**Frontend Developer Checklist** *(DORMANT — no frontend in this repo)*:
 
-- [ ] Follow component patterns from `patterns_library/ui/`
-- [ ] Use the project's UI component library ({{UI_LIBRARY}})
+- [ ] Follow API patterns from `patterns_library/api/`
+- [ ] Use validation patterns from `patterns_library/api/zod-validation-api.md`
 - [ ] Implement proper loading and error states
 - [ ] Follow accessibility standards
 - [ ] Write component tests alongside implementation
