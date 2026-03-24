@@ -1,6 +1,6 @@
 ---
 name: pattern-discovery
-description: Pattern library discovery for pattern-first development. Use BEFORE implementing any new feature, creating components, writing API routes, or adding database operations. Ensures existing patterns are checked first before writing new code.
+description: Pattern library discovery for pattern-first development. Use BEFORE implementing any new feature, creating API routes, or adding database operations. Ensures existing patterns are checked first before writing new code.
 context: fork
 agent: Explore
 allowed-tools: Read, Grep, Glob
@@ -17,7 +17,6 @@ Enforce pattern-first development by checking the Pattern library before impleme
 Invoke this skill when:
 
 - About to create a new API route
-- About to create a new UI component
 - About to add database operations
 - About to write integration tests
 - User asks "how do I implement..." or "how should I build..."
@@ -32,26 +31,26 @@ Invoke this skill when:
 Search `patterns_library/` for existing patterns:
 
 ```bash
-# Find patterns by category
 ls patterns_library/api/      # API route patterns
-# UI patterns archived (see docs/archive/harness-upstream/patterns-ui/)
-ls patterns_library/database/ # Database operation patterns
-ls patterns_library/testing/  # Testing patterns
+ls patterns_library/database/  # Database operation patterns
+ls patterns_library/testing/   # Testing patterns
+ls patterns_library/security/  # Security patterns
+ls patterns_library/ci/        # CI/CD patterns
+ls patterns_library/config/    # Configuration patterns
 ```
 
 ### Step 2: Review Pattern Index
 
 Check `patterns_library/README.md` for the complete pattern index:
 
-| Category | Patterns Available                                                          |
-| -------- | --------------------------------------------------------------------------- |
-| API      | User Context, Admin Context, Webhook Handler, Zod Validation, Bonus Content |
-| UI       | Authenticated Page, Form with Validation, Data Table, Marketing Page        |
-| Database | RLS Migration, SQL Transaction                                               |
-| Testing  | API Integration Test, Jest Patterns                                          |
-| Security | Input Sanitization, Rate Limiting, Secrets Management                       |
-| CI       | GitHub Actions Workflow, Deployment Pipeline                                |
-| Config   | Environment Config, Structured Logging                                      |
+| Category | Patterns Available |
+| -------- | ------------------ |
+| API | User Context, Admin Context, Webhook Handler, Zod Validation |
+| Database | RLS Migration, SQL Transaction |
+| Testing | API Integration Test |
+| Security | Input Sanitization, Rate Limiting, Secrets Management |
+| CI | GitHub Actions Workflow, Deployment Pipeline |
+| Config | Environment Config, Structured Logging |
 
 ### Step 3: Apply or Escalate
 
@@ -73,25 +72,17 @@ Check `patterns_library/README.md` for the complete pattern index:
 
 ```
 patterns_library/
-├── README.md           # Pattern index and usage guide
+├── README.md                  # Pattern index and usage guide
 ├── api/
 │   ├── user-context-api.md
 │   ├── admin-context-api.md
 │   ├── webhook-handler.md
-│   ├── zod-validation-api.md
-│   └── bonus-content-delivery.md
-├── ui/
-│   ├── authenticated-page.md
-│   ├── form-with-validation.md
-│   ├── data-table.md
-│   └── marketing-page.md
+│   └── zod-validation-api.md
 ├── database/
 │   ├── rls-migration.md
-│   ├── sql-transaction.md
-│   └── connection-patterns.md
+│   └── sql-transaction.md
 ├── testing/
-│   ├── api-integration-test.md
-│   └── jest-patterns.md
+│   └── api-integration-test.md
 ├── security/
 │   ├── input-sanitization.md
 │   ├── rate-limiting.md
@@ -104,30 +95,28 @@ patterns_library/
     └── structured-logging.md
 ```
 
+**Archived patterns** (upstream reference, not active):
+- `docs/archive/harness-upstream/patterns-ui/` — React/Next.js UI patterns
+- `docs/archive/harness-upstream/patterns-testing/e2e-user-flow.md` — Playwright E2E
+
 ## Pattern Matching Guide
 
-| If you need to...                  | Use this pattern                  |
+| If you need to... | Use this pattern |
 | ---------------------------------- | --------------------------------- |
-| Create authenticated API endpoint  | `api/user-context-api.md`         |
-| Create admin-only API endpoint     | `api/admin-context-api.md`        |
-| Handle external webhooks           | `api/webhook-handler.md`          |
-| Validate API input with Zod        | `api/zod-validation-api.md`       |
-| Serve private downloadable content | `api/bonus-content-delivery.md`   |
-| Create protected page              | `ui/authenticated-page.md`        |
-| Build form with validation         | `ui/form-with-validation.md`      |
-| Display paginated data             | `ui/data-table.md`                |
-| Create marketing/landing page      | `ui/marketing-page.md`            |
-| Add new table with RLS             | `database/rls-migration.md`       |
-| Run multi-step DB operations       | `database/sql-transaction.md`  |
-| Test API endpoints                 | `testing/api-integration-test.md` |
-| Write E2E user flow tests          | `testing/jest-patterns.md`        |
-| Sanitize user input                | `security/input-sanitization.md`  |
-| Add API rate limiting              | `security/rate-limiting.md`       |
-| Manage secrets/env vars            | `security/secrets-management.md`  |
-| Set up CI/CD pipeline              | `ci/github-actions-workflow.md`   |
-| Configure deployment stages        | `ci/deployment-pipeline.md`       |
-| Load environment configuration     | `config/environment-config.md`    |
-| Add structured logging             | `config/structured-logging.md`    |
+| Create authenticated API endpoint | `api/user-context-api.md` |
+| Create admin-only API endpoint | `api/admin-context-api.md` |
+| Handle external webhooks | `api/webhook-handler.md` |
+| Validate API input with Zod | `api/zod-validation-api.md` |
+| Add new table with RLS | `database/rls-migration.md` |
+| Run multi-step DB operations | `database/sql-transaction.md` |
+| Test API endpoints | `testing/api-integration-test.md` |
+| Sanitize user input | `security/input-sanitization.md` |
+| Add API rate limiting | `security/rate-limiting.md` |
+| Manage secrets/env vars | `security/secrets-management.md` |
+| Set up CI/CD pipeline | `ci/github-actions-workflow.md` |
+| Configure deployment stages | `ci/deployment-pipeline.md` |
+| Load environment configuration | `config/environment-config.md` |
+| Add structured logging | `config/structured-logging.md` |
 
 ## Security Requirements
 
@@ -143,13 +132,10 @@ All patterns enforce:
 After applying a pattern, run:
 
 ```bash
-npm run lint && npm run build  # All patterns
-npm test         # API patterns
-
+npm test && npm run build
 ```
 
 ## Authoritative Reference
 
 - **Pattern Index**: `patterns_library/README.md`
 - **RLS Patterns**: See `rls-patterns` skill for database security
-- **Frontend Patterns**: See `frontend-patterns` skill for UI conventions

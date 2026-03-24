@@ -64,22 +64,10 @@ Skills are loaded progressively—metadata at startup, full content when context
 
 ## Success Validation Commands
 
-### Frontend Development
-
-```bash
-npm run type-check && npm run lint && npm run build && echo "FE SUCCESS" || echo "FE FAILED"
-```
-
 ### Backend Development
 
 ```bash
-npm run test:integration && echo "BE SUCCESS" || echo "BE FAILED"
-```
-
-### Documentation
-
-```bash
-npm run lint:md && echo "DOCS SUCCESS" || echo "DOCS FAILED"
+npm test && npm run build && echo "BE SUCCESS" || echo "BE FAILED"
 ```
 
 ### Pre-Push Validation
