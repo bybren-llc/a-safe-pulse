@@ -43,7 +43,7 @@ The CLI will automatically detect and load skills from `.gemini/skills/` and com
 │   ├── rls-patterns/
 │   │   └── SKILL.md
 │   └── ... (14 more)
-└── commands/           # Custom commands (29 total)
+└── commands/           # Custom commands (30 total)
     ├── workflow/
     │   ├── start-work.toml
     │   ├── pre-pr.toml
@@ -101,6 +101,7 @@ gemini /help
 - `start-work [ticket]` - Start work on Linear ticket
 - `pre-pr` - Pre-PR validation checklist
 - `end-work` - Complete work session
+- `checkpoint` - Save session state for cross-session continuity
 - `check-workflow` - Quick workflow health check
 - `sync-linear` - Sync work with Linear ticket
 - `quick-fix [ticket]` - Fast-track bug fix

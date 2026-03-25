@@ -100,6 +100,7 @@ See: `docs/workflow/ARCHITECT_IN_CLI_ROLE.md` for orchestrator authority.
 | `/start-work`     | Begin new ticket with proper workflow | `/start-work 347` or `/start-work` |
 | `/pre-pr`         | Run complete validation before PR     | `/pre-pr`                          |
 | `/end-work`       | Complete work session cleanly         | `/end-work`                        |
+| `/checkpoint`     | Save session state for cross-session continuity | `/checkpoint`              |
 | `/check-workflow` | Quick status check of workflow        | `/check-workflow`                  |
 | `/update-docs`    | Identify and update documentation     | `/update-docs`                     |
 | `/retro`          | Conduct retrospective analysis        | `/retro`                           |

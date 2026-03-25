@@ -1,0 +1,54 @@
+[command]
+description = "Save structured session state for cross-session continuity"
+
+[command.prompt]
+text = """
+You are saving a session checkpoint for cross-session continuity.
+
+**Security rule**: Do NOT store secrets, raw tokens, credentials, or sensitive data in checkpoint files.
+
+## 1. Determine Ticket
+
+Extract ticket from branch:
+!{git branch --show-current 2>/dev/null | grep -oE 'ASP-[0-9]+'}
+
+If {{args}} was provided, use that instead. If no ticket, stop.
+
+## 2. Gather Git State
+
+!{git log -1 --oneline}
+!{git log origin/dev..HEAD --oneline 2>/dev/null | wc -l}
+!{git status --porcelain | wc -l}
+
+## 3. Summarize Session
+
+From conversation context, summarize:
+- Completed, Next Steps, Decisions, Blockers, Open Questions/Risks
+
+## 4. Write Checkpoint
+
+Write to `.claude/state/checkpoints/ASP-{number}.md` using the standard format:
+
+```
+## Session Checkpoint — {date}
+**Ticket**: ASP-{number}
+**Branch**: {branch}
+**Status**: {status}
+### Completed
+### Next Steps
+### Decisions Made
+### Blockers
+### Open Questions / Risks
+### Git State
+```
+
+## 5. Update Pointer
+
+Write ticket ID to `.claude/state/checkpoints/current.md`
+
+## 6. Confirm
+
+- ✅ Checkpoint saved
+- ✅ Pointer updated
+- Show summary
+"""

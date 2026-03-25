@@ -8,6 +8,27 @@ You are starting work on a new Linear ticket.
 
 **Workflow Authority**: This harness command provides execution steps. CONTRIBUTING.md is the northstar for conventions (branch naming, commit format, SAFe patterns). Follow both:
 
+## Session Resume (if returning to existing work)
+
+Before starting fresh, check for a prior session checkpoint:
+
+1. Check if `.claude/state/checkpoints/current.md` exists
+2. If it exists, read the ticket ID from it
+3. Read the matching checkpoint file: `.claude/state/checkpoints/ASP-{number}.md`
+4. **Verify match**:
+   - Ticket in pointer matches the requested ticket
+   - Checkpoint file exists
+   - Current branch matches checkpoint branch or ticket
+5. **If all match**: Display the checkpoint summary to the user and ask:
+   > "Found a checkpoint for ASP-{number} from {date}. Resume from this checkpoint, or start fresh?"
+   - **Resume**: Skip branch creation (branch already exists), use checkpoint as context
+   - **Start fresh**: Proceed with Pre-Flight Checklist below
+6. **If mismatch**: Show warning with details and offer:
+   - Resume the checkpoint anyway
+   - Start fresh on the requested ticket
+   - Clear the stale pointer
+7. **If no checkpoint or no `current.md`**: Proceed normally with Pre-Flight Checklist
+
 ## Pre-Flight Checklist
 
 1. **Linear Ticket Exists?**
