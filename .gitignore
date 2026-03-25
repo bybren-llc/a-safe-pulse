@@ -107,3 +107,6 @@ public
 coverage/
 *.lcov
 coverage/
+
+# Checkpoint files are local working state, not committed
+.claude/state/checkpoints/*.md

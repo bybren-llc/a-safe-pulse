@@ -12,7 +12,7 @@ These slash commands are part of the **a-safe-pulse™** multi-agent harness.
 
 The command architecture and workflow methodology are the intellectual property of J. Scott Graham and ByBren, LLC.
 
-## Commands Included (24 total)
+## Commands Included (25 total)
 
 ### Workflow Commands
 
@@ -22,6 +22,7 @@ The command architecture and workflow methodology are the intellectual property 
 | `/pre-pr` | Run validation before PR |
 | `/release` | Full version release (merge, tag, publish, sync, cleanup) |
 | `/end-work` | Complete work session |
+| `/checkpoint` | Save session state for cross-session continuity |
 | `/check-workflow` | Check workflow status |
 | `/update-docs` | Update documentation |
 | `/retro` | Session retrospective |

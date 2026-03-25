@@ -12,7 +12,7 @@ These slash commands are part of the **a-safe-pulse** multi-agent harness for Ge
 
 The command architecture and workflow methodology are the intellectual property of J. Scott Graham and ByBren, LLC.
 
-## Commands Included (29 total)
+## Commands Included (30 total)
 
 ### Workflow Commands (`/workflow:*`)
 
@@ -21,6 +21,7 @@ The command architecture and workflow methodology are the intellectual property 
 | `/workflow:start-work` | Begin work on Linear ticket |
 | `/workflow:pre-pr` | Run validation before PR |
 | `/workflow:end-work` | Complete work session |
+| `/workflow:checkpoint` | Save session state for cross-session continuity |
 | `/workflow:check-workflow` | Check workflow status |
 | `/workflow:update-docs` | Update documentation |
 | `/workflow:retro` | Session retrospective |

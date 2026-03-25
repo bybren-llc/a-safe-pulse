@@ -77,43 +77,32 @@ mcp__linear-mcp__update_issue
 mcp__linear-mcp__create_comment
 ```
 
-### 5. Context Preservation
+### 5. Save Checkpoint (conditional)
 
-If stopping mid-work, document:
+Save a session checkpoint if meaningful work was done:
 
-- What was completed
-- What's next
-- Any decisions made
-- Any blockers encountered
-- Questions to discuss
+**Required when ALL of these are true:**
+- Branch matches `ASP-\d+` pattern (SAFe ticket branch)
+- There is meaningful progress, a blocker, or pending next steps
+- Not in detached HEAD or non-SAFe branch
 
-Create context document if needed:
+**Skip checkpoint when:**
+- No ticket branch (e.g., `dev`, `main`, detached HEAD)
+- No meaningful work was done this session
+- User explicitly declines
 
-```markdown
-## Session Context - [Date]
+**If checkpointing:**
+1. Determine ticket from branch: `git branch --show-current | grep -oE 'ASP-[0-9]+'`
+2. Gather git state: last commit, unpushed count, uncommitted status
+3. Summarize: completed, next steps, decisions, blockers, open questions
+4. Write to `.claude/state/checkpoints/ASP-{number}.md`
+5. Update `.claude/state/checkpoints/current.md` pointer
+6. If status is "Ready for Review" or "Done", clear `current.md` (delete the file)
 
-### Completed
+**If skipping:**
+- Output: "No checkpoint created (reason: {reason})"
 
-- Item 1
-- Item 2
-
-### Next Steps
-
-1. Task 1
-2. Task 2
-
-### Decisions
-
-- Decision 1: Rationale
-
-### Blockers
-
-- Blocker 1: Details
-
-### Questions
-
-- Question 1
-```
+**Security rule**: Do NOT store secrets, raw tokens, credentials, or sensitive data in checkpoint files.
 
 ### 6. Branch Status
 
@@ -143,7 +132,7 @@ Provide summary:
 - ✅ All changes committed
 - ✅ Documentation current
 - ✅ Linear ticket updated
-- ✅ Context preserved (if needed)
+- ✅ Checkpoint saved (or skipped with reason)
 - ✅ Ready for next session
 
 Include any action items for user:
