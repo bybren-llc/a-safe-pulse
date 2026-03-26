@@ -2,6 +2,7 @@ import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals
 import request from 'supertest';
 import express from 'express';
 import session from 'express-session';
+import crypto from 'crypto';
 import axios from 'axios';
 import * as tokenManager from '../../src/auth/tokens';
 import * as models from '../../src/db/models';
@@ -79,14 +80,23 @@ describe('OAuth End-to-End Integration', () => {
   });
 
   describe('Linear OAuth E2E Flow', () => {
-    it('should complete the full Linear OAuth flow', async () => {
+    it('should complete the full Linear OAuth flow with PKCE and state', async () => {
+      const agent = request.agent(app);
+
       // Step 1: Initiate OAuth
-      const initiateResponse = await request(app)
+      const initiateResponse = await agent
         .get('/auth')
         .expect(302);
 
       expect(initiateResponse.headers.location).toContain('https://linear.app/oauth/authorize');
       expect(initiateResponse.headers.location).toContain('client_id=test-linear-client-id');
+      expect(initiateResponse.headers.location).toContain('state=');
+      expect(initiateResponse.headers.location).toContain('code_challenge=');
+      expect(initiateResponse.headers.location).toContain('code_challenge_method=S256');
+
+      // Extract state from the redirect URL
+      const url = new URL(initiateResponse.headers.location);
+      const state = url.searchParams.get('state')!;
 
       // Step 2: Mock the token exchange
       mockedAxios.post.mockResolvedValueOnce({
@@ -115,15 +125,15 @@ describe('OAuth End-to-End Integration', () => {
       // Mock token storage
       jest.mocked(mockedTokenManager.storeTokens).mockResolvedValue(undefined);
 
-      // Step 3: Handle callback
-      const callbackResponse = await request(app)
-        .get('/auth/callback?code=test-auth-code')
+      // Step 3: Handle callback with correct state
+      const callbackResponse = await agent
+        .get(`/auth/callback?code=test-auth-code&state=${state}`)
         .expect(200);
 
       expect(callbackResponse.text).toContain('Authorization Successful!');
       expect(callbackResponse.text).toContain('Test Organization');
 
-      // Verify token exchange was called (Linear uses URL-encoded form data)
+      // Verify token exchange was called with code_verifier
       expect(mockedAxios.post).toHaveBeenCalledWith(
         'https://api.linear.app/oauth/token',
         expect.any(URLSearchParams),
@@ -131,6 +141,11 @@ describe('OAuth End-to-End Integration', () => {
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         })
       );
+
+      // Verify code_verifier was included
+      const tokenExchangeCall = mockedAxios.post.mock.calls[0];
+      const params = tokenExchangeCall[1] as URLSearchParams;
+      expect(params.get('code_verifier')).toBeTruthy();
 
       // Verify token storage was called
       expect(mockedTokenManager.storeTokens).toHaveBeenCalledWith(
@@ -144,7 +159,7 @@ describe('OAuth End-to-End Integration', () => {
     }, 15000); // 15 second timeout
 
     it('should handle Linear OAuth errors gracefully', async () => {
-      // Test missing authorization code
+      // Test missing authorization code — also needs state validation, but code check is first
       const response = await request(app)
         .get('/auth/callback')
         .expect(400);
@@ -154,7 +169,7 @@ describe('OAuth End-to-End Integration', () => {
   });
 
   describe('Confluence OAuth E2E Flow', () => {
-    it('should complete the full Confluence OAuth flow', async () => {
+    it('should complete the full Confluence OAuth flow with PKCE and state', async () => {
       const agent = request.agent(app);
 
       // Step 1: Initiate Confluence OAuth
@@ -164,7 +179,15 @@ describe('OAuth End-to-End Integration', () => {
 
       expect(initiateResponse.headers.location).toContain('https://auth.atlassian.com/authorize');
       expect(initiateResponse.headers.location).toContain('client_id=test-confluence-client-id');
-      expect(initiateResponse.headers.location).toContain('state=test-org-id');
+      expect(initiateResponse.headers.location).toContain('code_challenge=');
+      expect(initiateResponse.headers.location).toContain('code_challenge_method=S256');
+
+      // Extract the cryptographic state from the redirect URL
+      const url = new URL(initiateResponse.headers.location);
+      const state = url.searchParams.get('state')!;
+      // State should be cryptographic, not the org ID
+      expect(state).not.toBe('test-org-id');
+      expect(state).toMatch(/^[0-9a-f]{64}$/);
 
       // Step 2: Mock the token exchange
       mockedAxios.post.mockResolvedValueOnce({
@@ -190,9 +213,9 @@ describe('OAuth End-to-End Integration', () => {
       // Mock token storage
       jest.mocked(mockedModels.storeConfluenceToken).mockResolvedValue(undefined);
 
-      // Step 3: Handle callback
+      // Step 3: Handle callback with correct cryptographic state
       const callbackResponse = await agent
-        .get('/auth/confluence/callback?code=test-auth-code&state=test-org-id')
+        .get(`/auth/confluence/callback?code=test-auth-code&state=${state}`)
         .expect(302);
 
       expect(callbackResponse.headers.location).toBe('/auth/confluence/success?organizationId=test-org-id');
@@ -204,14 +227,15 @@ describe('OAuth End-to-End Integration', () => {
 
       expect(successResponse.text).toContain('Success for test-org-id');
 
-      // Verify token exchange was called
+      // Verify token exchange was called with code_verifier
       expect(mockedAxios.post).toHaveBeenCalledWith(
         'https://auth.atlassian.com/oauth/token',
         expect.objectContaining({
           grant_type: 'authorization_code',
           client_id: 'test-confluence-client-id',
           client_secret: 'test-confluence-client-secret',
-          code: 'test-auth-code'
+          code: 'test-auth-code',
+          code_verifier: expect.any(String)
         })
       );
 
@@ -245,12 +269,12 @@ describe('OAuth End-to-End Integration', () => {
       expect(response.body.error).toBe('No authorization code received');
     }, 10000); // 10 second timeout
 
-    it('should handle missing organization ID', async () => {
+    it('should reject callback without session state (no initiate)', async () => {
       const response = await request(app)
-        .get('/auth/confluence/callback?code=test-code')
-        .expect(400);
+        .get('/auth/confluence/callback?code=test-code&state=fakestatevalue')
+        .expect(403);
 
-      expect(response.body.error).toBe('Invalid state parameter');
+      expect(response.body.error).toBe('Invalid OAuth state - session expired or missing');
     }, 10000); // 10 second timeout
   });
 
@@ -281,9 +305,13 @@ describe('OAuth End-to-End Integration', () => {
       const agent = request.agent(app);
 
       // Initiate OAuth (sets session)
-      await agent
+      const initiateResponse = await agent
         .get('/auth/confluence?organizationId=test-org-id')
         .expect(302);
+
+      // Extract the cryptographic state from the redirect URL
+      const url = new URL(initiateResponse.headers.location);
+      const state = url.searchParams.get('state')!;
 
       // Mock successful token exchange
       mockedAxios.post.mockResolvedValueOnce({
@@ -300,9 +328,9 @@ describe('OAuth End-to-End Integration', () => {
 
       jest.mocked(mockedModels.storeConfluenceToken).mockResolvedValue(undefined);
 
-      // Handle callback (should use session data)
+      // Handle callback with correct state (should use session data)
       const response = await agent
-        .get('/auth/confluence/callback?code=test-code')
+        .get(`/auth/confluence/callback?code=test-code&state=${state}`)
         .expect(302);
 
       expect(response.headers.location).toContain('organizationId=test-org-id');

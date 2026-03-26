@@ -5,6 +5,7 @@
  * It handles the OAuth flow, token storage, and token refresh.
  */
 
+import crypto from 'crypto';
 import axios from 'axios';
 import * as logger from '../utils/logger';
 import {
@@ -13,6 +14,7 @@ import {
   getConfluenceAccessToken
 } from '../db/models';
 import { encryptToken, decryptToken } from './tokens';
+import './session-types';
 
 /**
  * Initiates the Confluence OAuth flow
@@ -29,22 +31,40 @@ export const initiateConfluenceOAuth = (req: any, res: any): void => {
       return;
     }
 
+    if (!req.session) {
+      logger.error('Session not available for Confluence OAuth state management');
+      res.status(500).json({ error: 'Session not available' });
+      return;
+    }
+
     // Store the organization ID in the session for use in the callback
     req.session.organizationId = req.query.organizationId;
-    
+
+    // Generate cryptographic state parameter for CSRF protection
+    const state = crypto.randomBytes(32).toString('hex');
+    req.session.oauthState = state;
+
+    // Generate PKCE code verifier and challenge
+    // Atlassian OAuth2 supports PKCE (RFC 7636)
+    const codeVerifier = crypto.randomBytes(32).toString('base64url');
+    const codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64url');
+    req.session.codeVerifier = codeVerifier;
+
     // Redirect URL must be registered in the Atlassian Developer Console
     const redirectUri = `${process.env.APP_URL}/auth/confluence/callback`;
-    
+
     // Construct the authorization URL
     const authUrl = new URL('https://auth.atlassian.com/authorize');
     authUrl.searchParams.append('audience', 'api.atlassian.com');
     authUrl.searchParams.append('client_id', clientId);
     authUrl.searchParams.append('scope', 'read:confluence-content.summary read:confluence-space.summary read:confluence-content.all read:confluence-space.all');
     authUrl.searchParams.append('redirect_uri', redirectUri);
-    authUrl.searchParams.append('state', req.session.organizationId);
+    authUrl.searchParams.append('state', state);
     authUrl.searchParams.append('response_type', 'code');
     authUrl.searchParams.append('prompt', 'consent');
-    
+    authUrl.searchParams.append('code_challenge', codeChallenge);
+    authUrl.searchParams.append('code_challenge_method', 'S256');
+
     // Redirect the user to the authorization URL
     res.redirect(authUrl.toString());
   } catch (error) {
@@ -62,38 +82,79 @@ export const initiateConfluenceOAuth = (req: any, res: any): void => {
 export const handleConfluenceCallback = async (req: any, res: any): Promise<void> => {
   try {
     const { code, state } = req.query;
-    
+
     if (!code) {
       logger.error('No authorization code received from Confluence');
       res.status(400).json({ error: 'No authorization code received' });
       return;
     }
-    
-    // Verify the state parameter matches the organization ID
-    const organizationId = state || req.session.organizationId;
+
+    // Validate cryptographic state parameter (CSRF protection)
+    if (!req.session || !req.session.oauthState) {
+      logger.error('Confluence OAuth state not found in session');
+      res.status(403).json({ error: 'Invalid OAuth state - session expired or missing' });
+      return;
+    }
+
+    if (!state || typeof state !== 'string') {
+      logger.error('Missing state parameter in Confluence callback');
+      res.status(403).json({ error: 'Missing state parameter' });
+      return;
+    }
+
+    try {
+      const stateMatch = crypto.timingSafeEqual(
+        Buffer.from(state as string),
+        Buffer.from(req.session.oauthState)
+      );
+      if (!stateMatch) {
+        logger.error('Confluence OAuth state mismatch - possible CSRF attack');
+        res.status(403).json({ error: 'Invalid OAuth state' });
+        return;
+      }
+    } catch {
+      logger.error('Confluence OAuth state comparison failed');
+      res.status(403).json({ error: 'Invalid OAuth state' });
+      return;
+    }
+
+    // Retrieve PKCE code verifier and organization ID from session
+    const codeVerifier = req.session.codeVerifier;
+    if (!codeVerifier) {
+      logger.error('PKCE code verifier not found in session for Confluence');
+      res.status(403).json({ error: 'PKCE verification failed - session expired or missing' });
+      return;
+    }
+
+    const organizationId = req.session.organizationId;
     if (!organizationId) {
-      logger.error('No organization ID found in session or state parameter');
+      logger.error('No organization ID found in session');
       res.status(400).json({ error: 'Invalid state parameter' });
       return;
     }
-    
+
+    // Clear session OAuth state to prevent replay attacks
+    delete req.session.oauthState;
+    delete req.session.codeVerifier;
+
     // Exchange the authorization code for an access token
     const clientId = process.env.CONFLUENCE_CLIENT_ID;
     const clientSecret = process.env.CONFLUENCE_CLIENT_SECRET;
     const redirectUri = `${process.env.APP_URL}/auth/confluence/callback`;
-    
+
     if (!clientId || !clientSecret) {
       logger.error('Missing Confluence OAuth credentials');
       res.status(500).json({ error: 'Server configuration error' });
       return;
     }
-    
+
     const tokenResponse = await axios.post('https://auth.atlassian.com/oauth/token', {
       grant_type: 'authorization_code',
       client_id: clientId,
       client_secret: clientSecret,
       code,
-      redirect_uri: redirectUri
+      redirect_uri: redirectUri,
+      code_verifier: codeVerifier
     });
     
     const { 
