@@ -12,10 +12,8 @@ const mockRateLimiterInstance = {
   acquire: jest.fn().mockImplementation(() => Promise.resolve())
 };
 
-const MockedRateLimiter = jest.fn().mockImplementation(() => mockRateLimiterInstance);
-
 jest.mock('../../src/confluence/rate-limiter', () => ({
-  RateLimiter: MockedRateLimiter
+  RateLimiter: jest.fn().mockImplementation(() => mockRateLimiterInstance)
 }));
 
 describe('ConfluenceClient', () => {

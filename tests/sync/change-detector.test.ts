@@ -119,10 +119,10 @@ describe('ChangeDetector', () => {
       syncStore
     );
     
-    // Get mock instances
-    mockConfluenceClient = (ConfluenceClient as unknown) as jest.Mocked<ConfluenceClient>;
-    mockLinearClient = (LinearClientWrapper as unknown) as jest.Mocked<LinearClientWrapper>;
-    mockSyncStore = (SyncStore as unknown) as jest.Mocked<SyncStore>;
+    // Get mock instances from the actual objects passed to the constructor
+    mockConfluenceClient = confluenceClient as unknown as jest.Mocked<ConfluenceClient>;
+    mockLinearClient = linearClient as unknown as jest.Mocked<LinearClientWrapper>;
+    mockSyncStore = syncStore as unknown as jest.Mocked<SyncStore>;
     mockPlanningExtractor = (PlanningExtractor as unknown) as jest.Mocked<PlanningExtractor>;
   });
 
@@ -214,7 +214,7 @@ describe('ChangeDetector', () => {
       await expect(changeDetector.detectChanges(
         confluencePageIdOrUrl,
         linearTeamId
-      )).rejects.toThrow(error);
+      )).rejects.toThrow('Failed to detect Linear changes: Test error');
     });
   });
 

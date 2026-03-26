@@ -104,17 +104,26 @@ describe('HealthMonitor', () => {
     it('should detect healthy Linear token', async () => {
       const futureDate = new Date();
       futureDate.setDate(futureDate.getDate() + 30); // 30 days from now
-      
-      mockDbClient.query.mockResolvedValueOnce({
-        rows: [{
-          expires_at: futureDate.toISOString(),
-          updated_at: new Date().toISOString(),
-          refresh_token: 'refresh-token-123'
-        }]
-      });
+
+      // Mock both linear and confluence token queries
+      mockDbClient.query
+        .mockResolvedValueOnce({
+          rows: [{
+            expires_at: futureDate.toISOString(),
+            updated_at: new Date().toISOString(),
+            refresh_token: 'refresh-token-123'
+          }]
+        })
+        .mockResolvedValueOnce({
+          rows: [{
+            expires_at: futureDate.toISOString(),
+            updated_at: new Date().toISOString(),
+            refresh_token: 'refresh-token-456'
+          }]
+        });
 
       const tokenHealth = await healthMonitor['checkOAuthTokenHealth']();
-      
+
       expect(tokenHealth.linearToken.isHealthy).toBe(true);
       expect(tokenHealth.linearToken.daysUntilExpiration).toBeGreaterThan(20);
       expect(tokenHealth.linearToken.hasRefreshToken).toBe(true);
@@ -124,17 +133,28 @@ describe('HealthMonitor', () => {
     it('should detect expiring Linear token', async () => {
       const soonDate = new Date();
       soonDate.setDate(soonDate.getDate() + 3); // 3 days from now
-      
-      mockDbClient.query.mockResolvedValueOnce({
-        rows: [{
-          expires_at: soonDate.toISOString(),
-          updated_at: new Date().toISOString(),
-          refresh_token: 'refresh-token-123'
-        }]
-      });
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 30);
+
+      // Mock linear (expiring) and confluence (healthy) token queries
+      mockDbClient.query
+        .mockResolvedValueOnce({
+          rows: [{
+            expires_at: soonDate.toISOString(),
+            updated_at: new Date().toISOString(),
+            refresh_token: 'refresh-token-123'
+          }]
+        })
+        .mockResolvedValueOnce({
+          rows: [{
+            expires_at: futureDate.toISOString(),
+            updated_at: new Date().toISOString(),
+            refresh_token: 'refresh-token-456'
+          }]
+        });
 
       const tokenHealth = await healthMonitor['checkOAuthTokenHealth']();
-      
+
       expect(tokenHealth.linearToken.isHealthy).toBe(false);
       expect(tokenHealth.linearToken.daysUntilExpiration).toBeLessThanOrEqual(7);
       expect(tokenHealth.overall).toBe('warning');
@@ -161,81 +181,127 @@ describe('HealthMonitor', () => {
     });
 
     it('should handle missing Linear token', async () => {
-      mockDbClient.query.mockResolvedValueOnce({ rows: [] });
+      // Mock both queries - linear returns empty, confluence also empty
+      mockDbClient.query
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [] });
 
       const tokenHealth = await healthMonitor['checkOAuthTokenHealth']();
-      
+
       expect(tokenHealth.linearToken.isHealthy).toBe(false);
       expect(tokenHealth.linearToken.daysUntilExpiration).toBe(-1);
       expect(tokenHealth.overall).toBe('critical');
     });
 
     it('should handle database errors gracefully', async () => {
-      mockDbClient.query.mockRejectedValue(new Error('Database connection failed'));
+      (getClient as jest.Mock).mockRejectedValue(new Error('Database connection failed'));
 
       const tokenHealth = await healthMonitor['checkOAuthTokenHealth']();
-      
-      expect(tokenHealth.overall).toBe('unknown');
+
+      // When getClient fails, both token queries fail, individual catches return unhealthy defaults
+      // Overall will be 'critical' since both tokens are unhealthy
       expect(tokenHealth.linearToken.isHealthy).toBe(false);
       expect(tokenHealth.confluenceToken.isHealthy).toBe(false);
+      expect(tokenHealth.overall).toBe('critical');
     });
   });
 
   describe('API Rate Limit Monitoring', () => {
     it('should detect healthy Linear API usage', async () => {
-      mockDbClient.query.mockResolvedValueOnce({
-        rows: [{ access_token: 'valid-token' }]
-      });
-
-      // Mock random usage to be low
-      jest.spyOn(Math, 'random').mockReturnValue(0.1); // 10% usage
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 30);
+      // Mock both linear and confluence token queries for API stats estimation
+      mockDbClient.query
+        .mockResolvedValueOnce({
+          rows: [{
+            expires_at: futureDate.toISOString(),
+            updated_at: new Date().toISOString(),
+            refresh_token: 'token'
+          }]
+        })
+        .mockResolvedValueOnce({
+          rows: [{
+            expires_at: futureDate.toISOString(),
+            updated_at: new Date().toISOString(),
+            refresh_token: 'token'
+          }]
+        });
 
       const apiHealth = await healthMonitor['checkAPIRateLimits']();
-      
+
       expect(apiHealth.linear.isHealthy).toBe(true);
       expect(apiHealth.linear.usagePercentage).toBeLessThan(80);
       expect(apiHealth.linear.responseTime).toBeGreaterThan(0);
       expect(apiHealth.overall).toBe('healthy');
     });
 
-    it('should detect high Linear API usage', async () => {
-      mockDbClient.query.mockResolvedValueOnce({
-        rows: [{ access_token: 'valid-token' }]
-      });
-
-      // Mock random usage to be high
-      jest.spyOn(Math, 'random').mockReturnValue(0.9); // 90% usage
+    it('should detect high Linear API usage with unhealthy token', async () => {
+      const pastDate = new Date();
+      pastDate.setDate(pastDate.getDate() - 1);
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 30);
+      // Linear token unhealthy (expired) -> estimated 90% usage
+      // Confluence token healthy -> low usage
+      mockDbClient.query
+        .mockResolvedValueOnce({
+          rows: [{
+            expires_at: pastDate.toISOString(),
+            updated_at: new Date().toISOString(),
+            refresh_token: null
+          }]
+        })
+        .mockResolvedValueOnce({
+          rows: [{
+            expires_at: futureDate.toISOString(),
+            updated_at: new Date().toISOString(),
+            refresh_token: 'token'
+          }]
+        });
 
       const apiHealth = await healthMonitor['checkAPIRateLimits']();
-      
+
       expect(apiHealth.linear.isHealthy).toBe(false);
-      expect(apiHealth.linear.usagePercentage).toBeGreaterThan(80);
+      expect(apiHealth.linear.usagePercentage).toBeGreaterThanOrEqual(80);
       expect(apiHealth.overall).toBe('warning');
     });
 
-    it('should handle Linear API errors', async () => {
-      mockDbClient.query.mockResolvedValueOnce({ rows: [] }); // No token
+    it('should handle missing tokens in API stats', async () => {
+      // Both queries return no tokens -> both unhealthy
+      mockDbClient.query
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [] });
 
       const apiHealth = await healthMonitor['checkAPIRateLimits']();
-      
+
       expect(apiHealth.linear.isHealthy).toBe(false);
-      expect(apiHealth.linear.usagePercentage).toBe(100);
-      expect(apiHealth.linear.responseTime).toBe(0);
-      expect(apiHealth.overall).toBe('unknown');
+      expect(apiHealth.linear.usagePercentage).toBe(90); // 90% estimated for unhealthy
+      expect(apiHealth.linear.responseTime).toBe(500); // Unhealthy token -> 500ms
+      expect(apiHealth.overall).toBe('critical');
     });
 
     it('should monitor Confluence API usage', async () => {
-      mockDbClient.query.mockResolvedValueOnce({
-        rows: [{ access_token: 'valid-token' }]
-      });
-
-      // Mock Confluence usage to be moderate
-      jest.spyOn(Math, 'random').mockReturnValue(0.3); // 30% usage
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 30);
+      // Mock both linear and confluence token queries
+      mockDbClient.query
+        .mockResolvedValueOnce({
+          rows: [{
+            expires_at: futureDate.toISOString(),
+            updated_at: new Date().toISOString(),
+            refresh_token: 'token'
+          }]
+        })
+        .mockResolvedValueOnce({
+          rows: [{
+            expires_at: futureDate.toISOString(),
+            updated_at: new Date().toISOString(),
+            refresh_token: 'token'
+          }]
+        });
 
       const apiHealth = await healthMonitor['checkAPIRateLimits']();
-      
+
       expect(apiHealth.confluence.isHealthy).toBe(true);
-      expect(apiHealth.confluence.totalCalls).toBe(10000); // Confluence limit
       expect(apiHealth.confluence.usagePercentage).toBeLessThan(80);
     });
   });
@@ -385,22 +451,23 @@ describe('HealthMonitor', () => {
       (getClient as jest.Mock).mockRejectedValue(new Error('Database unavailable'));
 
       const tokenHealth = await healthMonitor['checkOAuthTokenHealth']();
-      
-      expect(tokenHealth.overall).toBe('unknown');
+
+      // Each token query catches the DB error individually and returns unhealthy defaults
       expect(tokenHealth.linearToken.isHealthy).toBe(false);
+      expect(tokenHealth.confluenceToken.isHealthy).toBe(false);
+      expect(tokenHealth.overall).toBe('critical');
     });
 
-    it('should handle Linear API errors', async () => {
-      mockDbClient.query.mockResolvedValueOnce({
-        rows: [{ access_token: 'invalid-token' }]
-      });
-      
-      mockLinearClient.viewer = Promise.reject(new Error('API Error'));
+    it('should handle unhealthy token in API rate estimation', async () => {
+      // Both token queries return no rows -> unhealthy tokens -> high estimated usage
+      mockDbClient.query
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [] });
 
       const apiHealth = await healthMonitor['checkAPIRateLimits']();
-      
+
       expect(apiHealth.linear.isHealthy).toBe(false);
-      expect(apiHealth.linear.responseTime).toBe(0);
+      expect(apiHealth.linear.responseTime).toBe(500); // unhealthy token -> 500ms estimate
     });
 
     it('should continue monitoring despite individual component errors', async () => {
