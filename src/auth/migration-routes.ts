@@ -5,11 +5,49 @@
  * rotation, and checking token migration/expiration status.
  */
 
+import crypto from 'crypto';
 import { Request, Response, Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import * as logger from '../utils/logger';
 import { migrateExistingToken, getTokenStatus } from './tokens';
 
 const router = Router();
+
+// Rate limiter for admin migration endpoints (defense-in-depth)
+const migrationLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 requests per window
+  message: { error: 'Too many requests, try again later' }
+});
+
+/**
+ * Timing-safe admin API key verification.
+ * Uses crypto.timingSafeEqual to prevent timing side-channel attacks.
+ * Returns false if ADMIN_API_KEY is not configured (defense-in-depth).
+ */
+function verifyAdminKey(providedKey: string | string[] | undefined): boolean {
+  const expectedKey = process.env.ADMIN_API_KEY;
+
+  // If ADMIN_API_KEY is not configured, reject ALL requests
+  if (!expectedKey) {
+    logger.error('ADMIN_API_KEY not configured — all admin requests rejected');
+    return false;
+  }
+
+  if (!providedKey || typeof providedKey !== 'string') {
+    return false;
+  }
+
+  // Length check before timing-safe comparison (timingSafeEqual requires equal lengths)
+  if (Buffer.byteLength(providedKey) !== Buffer.byteLength(expectedKey)) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(
+    Buffer.from(providedKey),
+    Buffer.from(expectedKey)
+  );
+}
 
 /**
  * POST /auth/migrate
@@ -19,16 +57,15 @@ const router = Router();
  *
  * Body: { organizationId: string }
  */
-router.post('/migrate', async (req: Request, res: Response) => {
+router.post('/migrate', migrationLimiter, async (req: Request, res: Response) => {
   try {
-    // Admin-only authentication
-    const adminKey = req.headers['x-admin-api-key'];
-    if (!adminKey || adminKey !== process.env.ADMIN_API_KEY) {
+    // Admin-only authentication (timing-safe)
+    if (!verifyAdminKey(req.headers['x-admin-api-key'])) {
       logger.warn('Unauthorized migration attempt', {
         ip: req.ip,
         userAgent: req.get('User-Agent')
       });
-      return res.status(403).json({ error: 'Forbidden: admin access required' });
+      return res.status(403).json({ error: 'Forbidden' });
     }
 
     const { organizationId } = req.body;
@@ -65,16 +102,15 @@ router.post('/migrate', async (req: Request, res: Response) => {
  * Returns expiration times and migration status for all organizations.
  * Admin-only: requires ADMIN_API_KEY header for authentication.
  */
-router.get('/token-status', async (req: Request, res: Response) => {
+router.get('/token-status', migrationLimiter, async (req: Request, res: Response) => {
   try {
-    // Admin-only authentication
-    const adminKey = req.headers['x-admin-api-key'];
-    if (!adminKey || adminKey !== process.env.ADMIN_API_KEY) {
+    // Admin-only authentication (timing-safe)
+    if (!verifyAdminKey(req.headers['x-admin-api-key'])) {
       logger.warn('Unauthorized token-status attempt', {
         ip: req.ip,
         userAgent: req.get('User-Agent')
       });
-      return res.status(403).json({ error: 'Forbidden: admin access required' });
+      return res.status(403).json({ error: 'Forbidden' });
     }
 
     const statuses = await getTokenStatus();

@@ -2,7 +2,8 @@
 -- Supports the transition from long-lived to short-lived + refresh token rotation (ASP-87)
 
 -- Track migration status per organization
-ALTER TABLE linear_tokens ADD COLUMN IF NOT EXISTS migration_status TEXT NOT NULL DEFAULT 'pending';
+ALTER TABLE linear_tokens ADD COLUMN IF NOT EXISTS migration_status TEXT NOT NULL DEFAULT 'pending'
+  CHECK (migration_status IN ('pending', 'migrated', 'failed'));
 -- Values: 'pending' (not migrated), 'migrated' (successfully migrated), 'failed' (migration attempted but failed)
 
 -- Preserve old access token for safe rollback

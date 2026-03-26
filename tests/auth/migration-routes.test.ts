@@ -33,7 +33,7 @@ describe('Migration Routes (ASP-87)', () => {
         .send({ organizationId: 'org-1' });
 
       expect(res.status).toBe(403);
-      expect(res.body.error).toContain('admin access required');
+      expect(res.body.error).toBe('Forbidden');
     });
 
     it('should return 403 with wrong admin API key', async () => {
