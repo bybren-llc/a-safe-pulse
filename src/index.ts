@@ -4,6 +4,7 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import { initiateOAuth, handleOAuthCallback } from './auth/oauth';
 import { initiateConfluenceOAuth, handleConfluenceCallback } from './auth/confluence-oauth';
+import migrationRoutes from './auth/migration-routes';
 import { handleWebhook } from './webhooks/handler';
 import { initializeDatabase } from './db/models';
 import * as logger from './utils/logger';
@@ -79,6 +80,9 @@ app.get('/auth/callback', oauthLimiter, handleOAuthCallback);
 // Confluence OAuth routes with rate limiting
 app.get('/auth/confluence', oauthLimiter, initiateConfluenceOAuth);
 app.get('/auth/confluence/callback', oauthLimiter, handleConfluenceCallback);
+
+// Token migration routes (admin-only, authenticated via ADMIN_API_KEY header)
+app.use('/auth', migrationRoutes);
 
 // OAuth success pages
 app.get('/auth/success', (req, res) => {

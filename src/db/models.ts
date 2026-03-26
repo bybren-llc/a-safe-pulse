@@ -81,6 +81,9 @@ export interface LinearToken {
   expires_at: Date;
   created_at: Date;
   updated_at: Date;
+  migration_status: 'pending' | 'migrated' | 'failed';
+  old_access_token: string | null;
+  migrated_at: Date | null;
 }
 
 /**
@@ -653,6 +656,48 @@ export const deleteLinearToken = async (organizationId: string): Promise<boolean
     return deleted;
   } catch (error) {
     logger.error('Error deleting token', { error, organizationId });
+    throw error;
+  }
+};
+
+/**
+ * Updates migration status for a Linear token
+ */
+export const updateLinearTokenMigration = async (
+  organizationId: string,
+  migrationStatus: 'pending' | 'migrated' | 'failed',
+  oldAccessToken: string | null,
+  migratedAt: Date | null
+): Promise<void> => {
+  try {
+    await query(
+      `
+        UPDATE linear_tokens SET
+          migration_status = $2,
+          old_access_token = $3,
+          migrated_at = $4,
+          updated_at = NOW()
+        WHERE organization_id = $1
+      `,
+      [organizationId, migrationStatus, oldAccessToken, migratedAt]
+    );
+
+    logger.info('Token migration status updated', { organizationId, migrationStatus });
+  } catch (error) {
+    logger.error('Error updating token migration status', { error, organizationId });
+    throw error;
+  }
+};
+
+/**
+ * Retrieves all Linear tokens (for admin status view)
+ */
+export const getAllLinearTokens = async (): Promise<LinearToken[]> => {
+  try {
+    const result = await query('SELECT * FROM linear_tokens ORDER BY organization_id');
+    return result.rows as LinearToken[];
+  } catch (error) {
+    logger.error('Error retrieving all linear tokens', { error });
     throw error;
   }
 };

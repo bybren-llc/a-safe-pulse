@@ -248,6 +248,65 @@ To reset and start over:
 3. Delete OAuth applications from Linear and Atlassian
 4. Clear `.env` file and start from Phase 3
 
+## Phase 6: Token Migration (Long-lived to Short-lived)
+
+Linear is deprecating long-lived OAuth access tokens. This section covers migrating existing tokens to short-lived access tokens with refresh token rotation.
+
+### Prerequisites
+
+1. Enable refresh tokens in your Linear OAuth application:
+   - Go to **Settings** > **API** > **OAuth Applications** > your app
+   - Enable **"Use refresh tokens"**
+   - Save changes
+
+2. Set the `ADMIN_API_KEY` environment variable (used to authenticate migration endpoints):
+   ```bash
+   ADMIN_API_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
+   ```
+
+### Step 1: Check Current Token Status
+
+```bash
+curl -H "x-admin-api-key: YOUR_ADMIN_API_KEY" \
+     http://localhost:3000/auth/token-status
+```
+
+This returns expiration times and migration status for all organizations.
+
+### Step 2: Migrate Tokens
+
+For each organization with `migration_status: "pending"`:
+
+```bash
+curl -X POST \
+     -H "Content-Type: application/json" \
+     -H "x-admin-api-key: YOUR_ADMIN_API_KEY" \
+     -d '{"organizationId": "YOUR_ORG_ID"}' \
+     http://localhost:3000/auth/migrate
+```
+
+The migration is idempotent -- safe to re-run if needed.
+
+### Step 3: Verify Migration
+
+```bash
+curl -H "x-admin-api-key: YOUR_ADMIN_API_KEY" \
+     http://localhost:3000/auth/token-status
+```
+
+Confirm all organizations show `migration_status: "migrated"`.
+
+### Rollback
+
+If migration causes issues, the old access token is preserved in the database (`old_access_token` column). Contact the development team for manual rollback procedures.
+
+### How Token Refresh Works Post-Migration
+
+After migration, the system automatically:
+- Checks token expiry before each Linear API call
+- Proactively refreshes tokens within 1 hour of expiry (not just on 401)
+- Rotates refresh tokens on each refresh (Linear provides a new refresh token with each refresh)
+
 ## Security Best Practices
 
 1. **Never commit OAuth credentials** to version control
