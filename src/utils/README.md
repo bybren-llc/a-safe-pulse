@@ -112,7 +112,7 @@ import {
 
 // Agent mention response
 const mentionResponse = createMentionResponse('john.doe');
-// "Hi @john.doe, I'm the WTFB Planning Agent. I can help with SAFe planning activities."
+// "Hi @john.doe, I'm the SAFe Pulse Agent. I can help with SAFe planning activities."
 
 // Assignment response
 const assignmentResponse = createAssignmentResponse('jane.smith', 'LIN-123');

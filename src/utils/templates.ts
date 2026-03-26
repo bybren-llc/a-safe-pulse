@@ -6,7 +6,7 @@
  * Creates a response for when the agent is mentioned
  */
 export const createMentionResponse = (username: string): string => {
-  return `Hi @${username}, I'm the WTFB Planning Agent. I can help with SAFe planning activities. How can I assist you today?`;
+  return `Hi @${username}, I'm the SAFe Pulse Agent. I can help with SAFe planning activities. How can I assist you today?`;
 };
 
 /**
