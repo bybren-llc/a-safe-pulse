@@ -82,7 +82,7 @@
       "category": "implementation",
       "description": "Schema changes, migrations, database architecture",
       "collapsible": true,
-      "primary_tools": ["prisma", "sql", "migration-tools"],
+      "primary_tools": ["pg", "sql", "raw-sql-migrations"],
       "exit_state": "Ready for QAS",
       "validation_command": "npm run build"
     },
@@ -92,7 +92,7 @@
       "category": "quality",
       "description": "Execute testing strategy, validate ACs, iteration authority",
       "collapsible": false,
-      "primary_tools": ["playwright", "jest", "linear"],
+      "primary_tools": ["jest", "linear"],
       "exit_state": "Approved for RTE",
       "gate_owner": true
     },
@@ -122,7 +122,7 @@
       "category": "quality",
       "description": "Test data, database access, data validation",
       "collapsible": true,
-      "primary_tools": ["sql", "prisma-studio", "scripts"],
+      "primary_tools": ["sql", "psql", "scripts"],
       "exit_state": null
     },
     "rte": {
@@ -258,7 +258,7 @@
 
   "agent_teams": {
     "_comment": "Agent Teams configuration (experimental). Requires CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 in settings.json.",
-    "enabled": false,
+    "enabled": true,
     "env_var": "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS",
     "default_team_lead": "tdm",
     "default_teammate_mode": "in-process",

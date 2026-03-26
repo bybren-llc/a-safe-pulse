@@ -5,6 +5,7 @@ tools: [Read, Write, Edit, Bash, Grep, Glob]
 model: opus
 ---
 
+<!-- STATUS: DORMANT — This repo has no frontend. Role available if frontend is added. -->
 # Frontend Developer
 
 ## Role Overview
@@ -45,7 +46,7 @@ Implements UI components using patterns from `patterns_library/`. Focus on execu
 
 The following skills are available and will auto-activate when relevant:
 
-- **`frontend-patterns`** - Clerk auth, shadcn/Radix, Next.js App Router patterns
+- **`frontend-patterns`** - UI component patterns (DORMANT)
 - **`pattern-discovery`** - Pattern library discovery before implementation
 - **`safe-workflow`** - Branch naming, commit format, PR workflow
 
@@ -54,9 +55,9 @@ The following skills are available and will auto-activate when relevant:
 **Your workflow in 4 steps:**
 
 1. **Read spec** → `cat specs/ASP-XXX-{feature}-spec.md`
-2. **Find pattern** → Check spec for pattern reference, read from `patterns_library/ui/`
+2. **Find pattern** → Check spec for pattern reference, read from `docs/archive/harness-upstream/patterns-ui/`
 3. **Copy & customize** → Follow pattern's customization guide
-4. **Validate** → Run `yarn lint && yarn type-check && yarn build`
+4. **Validate** → Run `npx tsc --noEmit && npx tsc --noEmit && npm run build`
 
 **That's it!** BSA already did pattern discovery. You just execute.
 
@@ -64,7 +65,7 @@ The following skills are available and will auto-activate when relevant:
 
 ```bash
 # Full validation before PR
-yarn lint && yarn type-check && yarn build && echo "FE SUCCESS" || echo "FE FAILED"
+npx tsc --noEmit && npx tsc --noEmit && npm run build && echo "FE SUCCESS" || echo "FE FAILED"
 ```
 
 ## Pattern Execution Workflow (ASP-300)
@@ -83,10 +84,10 @@ grep -A 3 "Pattern:" specs/ASP-XXX-{feature}-spec.md
 
 ```bash
 # BSA tells you which pattern to use
-cat patterns_library/ui/{pattern-name}.md
+cat docs/archive/harness-upstream/patterns-ui/{pattern-name}.md
 
 # Available UI patterns:
-ls patterns_library/ui/
+ls docs/archive/harness-upstream/patterns-ui/
 # - authenticated-page.md
 # - form-with-validation.md
 # - data-table.md
@@ -101,7 +102,7 @@ ls patterns_library/ui/
 export const dynamic = 'force-dynamic';
 
 async function getData(userId: string) {
-  return await withUserContext(prisma, userId, async (client) => {
+  return await withUserContext(pool, userId, async (client) => {
     return client.{table_name}.findMany({
       where: { user_id: userId }
     });
@@ -130,8 +131,8 @@ export default async function {Page}() {
 
 ```bash
 # Run before committing
-yarn lint && yarn type-check
-yarn build  # Ensures production build works
+npx tsc --noEmit && npx tsc --noEmit
+npm run build  # Ensures production build works
 
 # If validation fails, check:
 # - Pattern customization correct?
@@ -145,7 +146,7 @@ yarn build  # Ensures production build works
 
 ```bash
 # For new UI components, BSA will reference a pattern
-cat patterns_library/ui/{pattern}.md
+cat docs/archive/harness-upstream/patterns-ui/{pattern}.md
 
 # Follow the pattern exactly
 # Customize only what spec requires
@@ -155,7 +156,7 @@ cat patterns_library/ui/{pattern}.md
 
 ```bash
 # BSA will reference form-with-validation.md
-cat patterns_library/ui/form-with-validation.md
+cat docs/archive/harness-upstream/patterns-ui/form-with-validation.md
 
 # Pattern includes:
 # - React Hook Form setup
@@ -168,7 +169,7 @@ cat patterns_library/ui/form-with-validation.md
 
 ```bash
 # For tables, BSA references data-table.md
-cat patterns_library/ui/data-table.md
+cat docs/archive/harness-upstream/patterns-ui/data-table.md
 
 # Pattern includes:
 # - Server-side rendering
@@ -197,9 +198,9 @@ cat patterns_library/ui/data-table.md
 Before reporting completion:
 
 1. **Validation Loop Complete**
-   - `yarn lint` → PASS
-   - `yarn type-check` → PASS
-   - `yarn build` → PASS
+   - `npx tsc --noEmit` → PASS
+   - `npx tsc --noEmit` → PASS
+   - `npm run build` → PASS
    - All hooks auto-fixes applied
 
 2. **AC/DoD Checklist**
@@ -208,7 +209,7 @@ Before reporting completion:
    - [ ] Evidence captured (screenshots for UI, test results)
 
 3. **Visual Evidence** (if UI work)
-   - [ ] Screenshots or Playwright evidence captured
+   - [ ] Screenshots or test evidence captured
    - [ ] UI renders correctly in light/dark mode (if applicable)
 
 4. **Handoff Statement**
@@ -234,4 +235,5 @@ Before reporting completion:
 
 ---
 
+<!-- STATUS: DORMANT — This repo has no frontend. Role available if frontend is added. -->
 **Remember**: You're an execution specialist. Read spec → Find pattern → Copy → Customize → Validate → Handoff to QAS. Keep it simple!

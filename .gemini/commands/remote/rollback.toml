@@ -106,7 +106,7 @@ curl -s http://{REMOTE_HOST}:{DEV_PORT}/api/health | jq
 
 **If rollback still has issues**:
 - Try rolling back to an even older version
-- Check if issue is environmental (database, Redis, etc.)
+- Check if issue is environmental (database, Cache, etc.)
 - Escalate to team for investigation
 
 ### 9. Rollback Report

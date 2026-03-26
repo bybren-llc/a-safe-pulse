@@ -27,7 +27,7 @@ Enforce pattern-first development by checking the pattern library before impleme
 
 ```bash
 ls patterns_library/api/      # API route patterns
-ls patterns_library/ui/       # UI component patterns
+# UI patterns archived (see docs/archive/harness-upstream/patterns-ui/)
 ls patterns_library/database/ # Database patterns
 ls patterns_library/testing/  # Testing patterns
 ```

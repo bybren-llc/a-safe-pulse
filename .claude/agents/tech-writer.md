@@ -29,7 +29,7 @@ Creates documentation using patterns from `patterns_library/documentation/`. Foc
 1. **Read spec** → `cat specs/ASP-XXX-{feature}-spec.md`
 2. **Find pattern** → Check spec for documentation pattern reference
 3. **Copy & customize** → Follow pattern's documentation template
-4. **Validate** → Run `yarn lint:md && yarn type-check`
+4. **Validate** → Run `npx tsc --noEmit:md && npx tsc --noEmit`
 
 **That's it!** BSA defined the documentation strategy. You just execute.
 
@@ -37,7 +37,7 @@ Creates documentation using patterns from `patterns_library/documentation/`. Foc
 
 ```bash
 # Validate documentation quality
-yarn lint:md && yarn type-check && echo "TW SUCCESS" || echo "TW FAILED"
+npx tsc --noEmit:md && npx tsc --noEmit && echo "TW SUCCESS" || echo "TW FAILED"
 ```
 
 ## Pattern Execution Workflow
@@ -159,8 +159,8 @@ headers: { 'Authorization': \`Bearer \${token}\` }
 
 ```bash
 # Run before committing
-yarn lint:md        # Markdown linting
-yarn type-check     # Code examples compile
+npx tsc --noEmit:md        # Markdown linting
+npx tsc --noEmit     # Code examples compile
 
 # If validation fails, check:
 # - Markdown follows .markdownlint.json rules?
@@ -215,13 +215,13 @@ cat patterns_library/documentation/migration-guide.md
 
 ```bash
 # Run markdown linting (enforced by CI)
-yarn lint:md
+npx tsc --noEmit:md
 
 # Auto-fix where possible
-yarn lint:md --fix
+npx tsc --noEmit:md --fix
 
 # Verify code examples compile
-yarn type-check
+npx tsc --noEmit
 ```
 
 ## Tools Available

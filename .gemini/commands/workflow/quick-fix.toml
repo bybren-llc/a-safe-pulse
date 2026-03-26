@@ -47,15 +47,13 @@ git commit -m "fix(scope): resolve {issue} [{TICKET_PREFIX}-XXX]"
 Run essential checks only:
 
 ```bash
-!{yarn type-check 2>&1 || echo "Type check completed"}
-!{yarn lint 2>&1 || echo "Lint completed"}
-!{yarn test:unit 2>&1 || echo "Unit tests completed"}
+!{npm run build 2>&1 || echo "Build check completed"}
+!{npm test 2>&1 || echo "Tests completed"}
 ```
 
 **Skip** if time-critical:
 - Integration tests
-- E2E tests
-- Build verification
+- Full build verification
 
 ### 4. Quick PR
 

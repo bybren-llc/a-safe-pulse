@@ -322,7 +322,7 @@ Next steps:
 | ---------- | ------------------- | ------------ |
 | App        | 3000                | 3001         |
 | PostgreSQL | 5432                | 5433         |
-| Redis      | 6379                | 6380         |
+| Cache      | 6379                | 6380         |
 
 **Start both environments**:
 

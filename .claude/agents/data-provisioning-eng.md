@@ -33,7 +33,7 @@ Implements data pipelines and ETL processes using patterns. Focus on execution o
 
 ```bash
 # Validate data pipeline
-yarn test:integration && yarn type-check && echo "DPE SUCCESS" || echo "DPE FAILED"
+npm test && npx tsc --noEmit && echo "DPE SUCCESS" || echo "DPE FAILED"
 ```
 
 ## Pattern Execution Workflow
@@ -62,10 +62,10 @@ grep -A 3 "Pattern:" specs/ASP-XXX-{feature}-spec.md
 ```typescript
 // Always use RLS context for database ops
 import { withSystemContext } from '@/lib/rls-context';
-import { prisma } from '@/lib/prisma';
+import { pool } from '../db';
 
 export async function processData(sourceData: any[]) {
-  return await withSystemContext(prisma, 'etl_pipeline', async (client) => {
+  return await withSystemContext(pool, 'etl_pipeline', async (client) => {
     // Transform and load data
     const transformed = sourceData.map(item => ({
       // Transform logic here
@@ -85,7 +85,7 @@ export async function processData(sourceData: any[]) {
 
 ```bash
 # Run data validation
-yarn test:integration
+npm test
 
 # Check data integrity
 node scripts/validate-data-{pipeline}.js

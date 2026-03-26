@@ -40,8 +40,6 @@ ssh -i {SSH_KEY_PATH} {REMOTE_USER}@{REMOTE_HOST} "docker logs {APP_CONTAINER} -
 # PostgreSQL logs
 ssh -i {SSH_KEY_PATH} {REMOTE_USER}@{REMOTE_HOST} "docker logs {DB_CONTAINER} --tail 100"
 
-# Redis logs
-ssh -i {SSH_KEY_PATH} {REMOTE_USER}@{REMOTE_HOST} "docker logs {REDIS_CONTAINER} --tail 100"
 ```
 
 ### 3. Filter and Highlight
@@ -71,7 +69,7 @@ Provide quick analysis:
 ```text
 Remote Dev Logs Analysis
 
-{APP_CONTAINER} (Next.js):
+{APP_CONTAINER} (Node.js):
   Status:    Running
   Errors:    0
   Warnings:  2
@@ -81,11 +79,6 @@ Remote Dev Logs Analysis
   Status:    Running
   Errors:    0
   Last Line: database system is ready
-
-{REDIS_CONTAINER}:
-  Status:    Running
-  Errors:    0
-  Last Line: Ready to accept connections
 
 Overall Health: Healthy
 ```

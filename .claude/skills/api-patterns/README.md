@@ -3,12 +3,12 @@
 ![Status](https://img.shields.io/badge/status-production-green)
 ![Harness](https://img.shields.io/badge/harness-v2.10.0-blue)
 
-> API route implementation patterns with RLS, Zod validation, and error handling.
+> Express API route implementation patterns with Zod validation and error handling.
 
 ## License
 
 **License:** MIT (see [/LICENSE](/LICENSE))
-**Copyright:** © 2026 J. Scott Graham ([@cheddarfox](https://github.com/cheddarfox)) / [ByBren, LLC](https://github.com/bybren-llc)
+**Copyright:** (c) 2026 J. Scott Graham ([@cheddarfox](https://github.com/cheddarfox)) / [ByBren, LLC](https://github.com/bybren-llc)
 **Attribution:** Required per [/NOTICE](/NOTICE)
 
 ## Intellectual Property
@@ -18,7 +18,7 @@ The skill system architecture and ASP harness methodology are the intellectual p
 ## Quick Start
 
 This skill activates automatically when you:
-- Create new API routes
+- Create new Express API routes
 - Implement CRUD endpoints
 - Add request/response validation
 - Handle webhooks
@@ -26,7 +26,7 @@ This skill activates automatically when you:
 
 ## What This Skill Does
 
-Routes to existing API patterns and provides checklists for safe, validated API route implementation. All API routes MUST use RLS context helpers for database access.
+Routes to existing API patterns and provides checklists for safe, validated Express API route implementation. All routes use parameterized SQL queries via `src/db/connection.ts` for database access.
 
 ## Trigger Keywords
 
@@ -46,7 +46,7 @@ Routes to existing API patterns and provides checklists for safe, validated API 
 
 | Field | Value |
 |-------|-------|
-| Last Updated | 2026-01-04 |
+| Last Updated | 2026-03-19 |
 | Harness Version | v2.10.0 |
 
 ---

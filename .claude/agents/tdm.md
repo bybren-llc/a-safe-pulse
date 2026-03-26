@@ -28,7 +28,7 @@ The TDM coordinates work across all agents, manages blockers, updates Linear tic
 ```bash
 # Verify all Linear tickets are up-to-date (manual check)
 # Verify all PRs pass CI/CD
-yarn ci:validate && echo "TDM SUCCESS" || echo "TDM FAILED"
+npm test && npm run build && echo "TDM SUCCESS" || echo "TDM FAILED"
 
 # Verify git workflow compliance
 git log --oneline -10 | grep -E "ASP-[0-9]+" && echo "LINEAR TRACKING SUCCESS"
@@ -113,11 +113,11 @@ git rebase origin/dev
 # Help agent resolve conflicts
 
 # CI/CD failures
-yarn ci:validate
+npm test && npm run build
 # Identify specific failure and route to appropriate agent
 
 # Dependency issues
-yarn install
+npm install
 # Verify package.json conflicts
 ```
 
@@ -153,7 +153,7 @@ git fetch origin
 git rebase origin/dev
 
 # Run validation
-yarn ci:validate
+npm test && npm run build
 
 # Check Linear ticket completeness
 # - Evidence attached
@@ -260,7 +260,7 @@ grep -r "SUCCESS|FAILED" ~/.claude/todos/
 ### CI/CD Validation
 
 \`\`\`bash
-yarn ci:validate
+npm test && npm run build
 
 # [Output]
 

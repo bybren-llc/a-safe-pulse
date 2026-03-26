@@ -35,17 +35,13 @@ Identify:
 ### 2. Determine Output Framework
 
 Ask user or detect from project context:
-- **React** (with hooks, TypeScript optional)
-- **Next.js** (App Router)
-- **Vue** (Composition API)
 - **HTML/CSS** (vanilla)
-- **Tailwind CSS** (styling)
-- **shadcn/ui** (component library)
+- **TypeScript** (Node.js backend)
 
 Check project for existing framework:
 
 ```bash
-!{cat package.json 2>/dev/null | grep -E '"react"|"next"|"vue"' | head -3 || echo "No package.json found"}
+!{cat package.json 2>/dev/null | grep -E '"express"|"typescript"' | head -3 || echo "No package.json found"}
 ```
 
 ### 3. Generate Code
@@ -85,7 +81,7 @@ Save generated code to appropriate location:
 /media:sketch-to-code ~/Downloads/figma-export.png
 
 # From wireframe with framework hint
-/media:sketch-to-code ./wireframe.png --react --tailwind
+/media:sketch-to-code ./wireframe.png --typescript
 
 # From architecture diagram
 /media:sketch-to-code ./system-diagram.png --mermaid
@@ -93,12 +89,8 @@ Save generated code to appropriate location:
 
 ## Output Formats
 
-- `--react` - React functional component
-- `--nextjs` - Next.js page/component
-- `--vue` - Vue 3 composition component
 - `--html` - Vanilla HTML/CSS
-- `--tailwind` - Use Tailwind CSS classes
-- `--shadcn` - Use shadcn/ui components
+- `--typescript` - TypeScript module
 - `--mermaid` - Convert diagram to Mermaid syntax
 
 ## Tips for Best Results

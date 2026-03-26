@@ -26,7 +26,7 @@ Validates security implementation using patterns from `patterns_library/security
 1. **Read spec** → `cat specs/ASP-XXX-{feature}-spec.md`
 2. **Find pattern** → Check spec for security pattern reference
 3. **Copy & validate** → Follow pattern's security validation guide
-4. **Audit** → Run `npm audit && yarn lint && RLS validation`
+4. **Audit** → Run `npm audit && npx tsc --noEmit && RLS validation`
 
 **That's it!** BSA defined the security requirements. You just validate.
 
@@ -34,7 +34,7 @@ Validates security implementation using patterns from `patterns_library/security
 
 ```bash
 # Full security validation
-cat scripts/rls-phase4-final-validation.sql | docker exec -i a-safe-pulse-postgres-1 psql -U {{PROJECT}}_app_user -d {{PROJECT}}_dev && npm audit --audit-level=high && yarn lint && echo "SECURITY SUCCESS" || echo "SECURITY FAILED"
+cat scripts/rls-phase4-final-validation.sql | docker exec -i a-safe-pulse-postgres-1 psql -U {{PROJECT}}_app_user -d {{PROJECT}}_dev && npm audit --audit-level=high && npx tsc --noEmit && echo "SECURITY SUCCESS" || echo "SECURITY FAILED"
 ```
 
 ## Pattern Execution Workflow
@@ -86,8 +86,8 @@ for file in $(find app/api -name "route.ts"); do
   fi
 done
 
-# Verify RLS context usage (no direct prisma calls)
-grep -r "prisma\." app/ | grep -v "withUserContext|withAdminContext|withSystemContext"
+# Verify RLS context usage (no direct SQL without wrappers)
+grep -r "pool\.query\|client\.query" src/ | grep -v "withUserContext\|withAdminContext\|withSystemContext"
 ```
 
 **For Vulnerability Scan (vulnerability-scan.md):**
@@ -119,7 +119,7 @@ npx depcheck
 ### RLS Enforcement
 
 - [ ] All database operations use context helpers
-- [ ] No direct Prisma calls (ESLint enforces this)
+- [ ] No direct SQL without pool module (ESLint enforces this)
 - [ ] User isolation verified with test
 - [ ] Admin operations use `withAdminContext`
 
@@ -197,7 +197,7 @@ cat patterns_library/security/vulnerability-scan.md
 
 **ZERO TOLERANCE for:**
 
-- Direct Prisma calls without RLS context
+- Direct SQL calls without RLS context wrappers
 - Missing authentication on protected routes
 - Secrets committed to code
 - High/critical npm vulnerabilities

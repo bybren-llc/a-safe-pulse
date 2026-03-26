@@ -54,44 +54,40 @@ Prune remote tracking branches:
 Detect what changed to determine necessary steps:
 
 ```bash
-!{git diff HEAD@{1} HEAD -- package.json yarn.lock 2>/dev/null | head -5}
+!{git diff HEAD@{1} HEAD -- package.json package-lock.json 2>/dev/null | head -5}
 ```
 
 **Decision Logic**:
-- If deps changed → Run yarn install
-- If schema changed → Run Prisma operations
+- If deps changed → Run npm install
+- If schema changed → Check migration files
 - If both empty → Fast path: Jump to Docker check
 
 ### 5. Install Dependencies (Conditional)
 
-Only run if package.json or yarn.lock changed:
+Only run if package.json or package-lock.json changed:
 
 ```bash
-!{yarn install 2>&1 || echo "Install completed"}
+!{npm install 2>&1 || echo "Install completed"}
 ```
 
-### 6. Prisma Client Update (Conditional)
+### 6. Database Migration Check (Conditional)
 
-Only run if schema or migrations changed:
+Only run if migration files changed:
 
 ```bash
-!{npx prisma generate 2>&1 || echo "Prisma generate completed"}
+!{ls -la src/db/migrations/ 2>&1 || echo "Migration check completed"}
 ```
 
-Check for pending migrations:
-
-```bash
-!{npx prisma migrate status 2>&1 || echo "Migration status checked"}
-```
+Note: Raw SQL migrations in `src/db/migrations/` run automatically on application startup.
 
 ### 7. Validation (Optional)
 
-Ask user: "Run full validation (yarn ci:validate)?"
+Ask user: "Run full validation (npm test && npm run build)?"
 
 If user chooses Yes:
 
 ```bash
-!{yarn ci:validate 2>&1 || echo "Validation completed"}
+!{npm test && npm run build 2>&1 || echo "Validation completed"}
 ```
 
 ### 8. Docker Services Check
@@ -117,7 +113,7 @@ Generate comprehensive sync report showing:
 
 - Git pull successful
 - Dependencies installed (if changed)
-- Prisma client generated (if schema changed)
+- Migration files reviewed (if changed)
 - No pending migrations (or applied if schema changed)
 - Docker services running
 - Clear status report provided

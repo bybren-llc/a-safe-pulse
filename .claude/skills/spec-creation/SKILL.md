@@ -68,7 +68,7 @@ Looks good to reviewer.
 
 ## Pattern Reference
 
-- **UI Pattern**: `patterns_library/ui/modal-form.md`
+- **UI Pattern**: `patterns_library/api/zod-validation-api.md`
 - **API Pattern**: `patterns_library/api/crud-endpoint.md`
 - **RLS Pattern**: `patterns_library/security/rls-user-data.md`
 
@@ -78,7 +78,7 @@ Looks good to reviewer.
 
 ```bash
 # Run these commands to verify implementation
-yarn test:unit --grep "ModalForm"
+npm test -- --testPathPattern="ModalForm"
 curl -X POST http://localhost:3000/api/endpoint -d '{"test": true}'
 ```
 ````
@@ -108,7 +108,7 @@ As a [user type], I want [goal] so that [benefit].
 
 ## Pattern References
 
-- **UI**: `patterns_library/ui/{pattern}.md`
+- **API**: `patterns_library/api/{pattern}.md`
 - **API**: `patterns_library/api/{pattern}.md`
 - **Database**: `patterns_library/database/{pattern}.md`
 - **Security**: Follow RLS patterns in `docs/database/RLS_IMPLEMENTATION_GUIDE.md`

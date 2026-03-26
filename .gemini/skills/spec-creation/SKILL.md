@@ -33,7 +33,7 @@ As a [user type], I want [goal] so that [benefit].
 - [ ] {Testable criterion 3}
 
 ## Pattern References
-- **UI**: `patterns_library/ui/{pattern}.md`
+- **API**: `patterns_library/api/{pattern}.md`
 - **API**: `patterns_library/api/{pattern}.md`
 - **Database**: `patterns_library/database/{pattern}.md`
 

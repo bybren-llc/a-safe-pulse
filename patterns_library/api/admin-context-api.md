@@ -2,25 +2,25 @@
 
 ## What It Does
 
-Creates an admin-only API route with elevated permissions and RLS enforcement. Used for administrative operations that require higher access levels than regular users.
+Creates an admin-only Express API route with elevated permissions. Used for administrative operations that require higher access levels than regular users, such as managing organizations, users, or system configuration.
 
 ## When to Use
 
 - Admin dashboard CRUD operations
-- Content management systems
-- User management endpoints
+- Organization management endpoints
 - System configuration APIs
 - Reports and analytics for admins
+- User management endpoints
 
 ## Code Pattern
 
 ```typescript
-// app/api/admin/{resource}/route.ts
-import { NextRequest, NextResponse } from 'next/server';
+// src/routes/admin/{resource}.ts
+import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { verifyAdminAndGetUserId } from '@/lib/auth-admin';
-import { withAdminContext } from '@/lib/rls-context';
-import { prisma } from '@/lib/prisma';
+import { Pool } from 'pg';
+
+const router = Router();
 
 // Validation schemas
 const QuerySchema = z.object({
@@ -36,240 +36,216 @@ const CreateSchema = z.object({
 });
 
 /**
+ * Middleware: verify the authenticated user has admin privileges.
+ * Place this on the router or apply per-route.
+ */
+function requireAdmin(req: Request, res: Response, next: Function): void {
+  const user = (req as any).user;
+
+  if (!user) {
+    res.status(401).json({ error: 'Authentication required' });
+    return;
+  }
+
+  if (user.role !== 'admin') {
+    res.status(403).json({ error: 'Admin access required' });
+    return;
+  }
+
+  next();
+}
+
+// Apply admin check to all routes on this router
+router.use(requireAdmin);
+
+/**
  * GET /api/admin/{resource} - List resources (admin only)
  */
-export async function GET(request: NextRequest) {
+router.get('/', async (req: Request, res: Response) => {
   try {
-    // 1. Admin verification (checks auth + admin role)
-    const adminId = await verifyAdminAndGetUserId();
+    const adminId = (req as any).user.id;
 
-    // 2. Parse and validate query parameters
-    const { searchParams } = new URL(request.url);
+    // Parse and validate query parameters
     const query = QuerySchema.parse({
-      status: searchParams.get('status') || 'ALL',
-      limit: searchParams.get('limit'),
-      offset: searchParams.get('offset'),
+      status: req.query.status || 'ALL',
+      limit: req.query.limit,
+      offset: req.query.offset,
     });
 
-    // 3. Database operations within admin RLS context
-    const data = await withAdminContext(prisma, adminId, async (client) => {
-      const whereClause: any = {};
+    // Build query with optional status filter
+    const pool: Pool = req.app.get('db');
+    const conditions: string[] = [];
+    const params: any[] = [];
+    let paramIndex = 1;
 
-      // Build filter conditions
-      if (query.status !== 'ALL') {
-        whereClause.status = query.status;
-      }
+    if (query.status !== 'ALL') {
+      conditions.push(`status = $${paramIndex++}`);
+      params.push(query.status);
+    }
 
-      return client.{table_name}.findMany({
-        where: whereClause,
-        take: query.limit,
-        skip: query.offset,
-        orderBy: {
-          created_at: 'desc'
-        },
-        // Include related data if needed
-        include: {
-          // ... relations
-        }
-      });
-    });
+    const whereClause = conditions.length > 0
+      ? `WHERE ${conditions.join(' AND ')}`
+      : '';
 
-    // 4. Success response
-    return NextResponse.json({
+    params.push(query.limit, query.offset);
+    const result = await pool.query(
+      `SELECT * FROM {table_name}
+       ${whereClause}
+       ORDER BY created_at DESC
+       LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
+      params
+    );
+
+    return res.json({
       success: true,
-      data,
-      total: data.length,
-      admin_id: adminId
+      data: result.rows,
+      total: result.rows.length,
+      admin_id: adminId,
     });
-
   } catch (error) {
     console.error('Error fetching admin {resource}:', error);
 
-    // Handle admin verification failure
-    if (error instanceof Error && error.message === 'Admin access required') {
-      return NextResponse.json(
-        { error: 'Admin access required' },
-        { status: 403 }
-      );
-    }
-
-    // Handle validation errors
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Invalid parameters', details: error.errors },
-        { status: 400 }
-      );
+      return res.status(400).json({
+        error: 'Invalid parameters',
+        details: error.errors,
+      });
     }
 
-    return NextResponse.json(
-      { error: 'Failed to fetch {resource}' },
-      { status: 500 }
-    );
+    return res.status(500).json({ error: 'Failed to fetch {resource}' });
   }
-}
+});
 
 /**
  * POST /api/admin/{resource} - Create resource (admin only)
  */
-export async function POST(request: NextRequest) {
+router.post('/', async (req: Request, res: Response) => {
   try {
-    // 1. Admin verification
-    const adminId = await verifyAdminAndGetUserId();
+    const adminId = (req as any).user.id;
+    const validated = CreateSchema.parse(req.body);
 
-    // 2. Parse and validate request body
-    const body = await request.json();
-    const validated = CreateSchema.parse(body);
+    const pool: Pool = req.app.get('db');
 
-    // 3. Create resource within admin RLS context
-    const created = await withAdminContext(prisma, adminId, async (client) => {
-      return client.{table_name}.create({
-        data: {
-          ...validated,
-          created_by: adminId,  // Track who created it
-        }
-      });
-    });
-
-    // 4. Optional: Audit logging
-    await withAdminContext(prisma, adminId, async (client) => {
-      await client.audit_log.create({
-        data: {
-          user_id: adminId,
-          action: 'CREATE',
-          resource_type: '{resource}',
-          resource_id: created.id,
-          details: { title: created.title }
-        }
-      });
-    });
-
-    // 5. Success response
-    return NextResponse.json(
-      { success: true, data: created },
-      { status: 201 }
+    // Create resource
+    const result = await pool.query(
+      `INSERT INTO {table_name} (title, status, created_by, created_at, updated_at)
+       VALUES ($1, $2, $3, NOW(), NOW())
+       RETURNING *`,
+      [validated.title, validated.status, adminId]
     );
 
+    // Optional: Audit logging
+    await pool.query(
+      `INSERT INTO audit_log (user_id, action, resource_type, resource_id, details, created_at)
+       VALUES ($1, $2, $3, $4, $5, NOW())`,
+      [adminId, 'CREATE', '{resource}', result.rows[0].id, JSON.stringify({ title: validated.title })]
+    );
+
+    return res.status(201).json({ success: true, data: result.rows[0] });
   } catch (error) {
     console.error('Error creating admin {resource}:', error);
 
-    if (error instanceof Error && error.message === 'Admin access required') {
-      return NextResponse.json(
-        { error: 'Admin access required' },
-        { status: 403 }
-      );
-    }
-
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Validation failed', details: error.errors },
-        { status: 400 }
-      );
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: error.errors,
+      });
     }
 
-    return NextResponse.json(
-      { error: 'Failed to create {resource}' },
-      { status: 500 }
-    );
+    return res.status(500).json({ error: 'Failed to create {resource}' });
   }
-}
+});
 
 /**
- * PUT /api/admin/{resource}/[id] - Update resource (admin only)
+ * PUT /api/admin/{resource}/:id - Update resource (admin only)
  */
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+router.put('/:id', async (req: Request, res: Response) => {
   try {
-    const adminId = await verifyAdminAndGetUserId();
-    const body = await request.json();
+    const adminId = (req as any).user.id;
+    const { id } = req.params;
 
-    const UpdateSchema = CreateSchema.partial();  // All fields optional
-    const validated = UpdateSchema.parse(body);
+    const UpdateSchema = CreateSchema.partial();
+    const validated = UpdateSchema.parse(req.body);
 
-    const updated = await withAdminContext(prisma, adminId, async (client) => {
-      return client.{table_name}.update({
-        where: { id: params.id },
-        data: {
-          ...validated,
-          updated_by: adminId,
-          updated_at: new Date()
-        }
-      });
-    });
+    const pool: Pool = req.app.get('db');
 
-    return NextResponse.json({ success: true, data: updated });
+    // Build dynamic SET clause
+    const setClauses: string[] = [];
+    const params: any[] = [];
+    let paramIndex = 1;
 
+    for (const [key, value] of Object.entries(validated)) {
+      setClauses.push(`${key} = $${paramIndex++}`);
+      params.push(value);
+    }
+
+    setClauses.push(`updated_by = $${paramIndex++}`);
+    params.push(adminId);
+    setClauses.push(`updated_at = NOW()`);
+
+    params.push(id);
+
+    const result = await pool.query(
+      `UPDATE {table_name}
+       SET ${setClauses.join(', ')}
+       WHERE id = $${paramIndex}
+       RETURNING *`,
+      params
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: '{Resource} not found' });
+    }
+
+    return res.json({ success: true, data: result.rows[0] });
   } catch (error) {
     console.error('Error updating admin {resource}:', error);
-
-    if (error instanceof Error && error.message === 'Admin access required') {
-      return NextResponse.json(
-        { error: 'Admin access required' },
-        { status: 403 }
-      );
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to update {resource}' },
-      { status: 500 }
-    );
+    return res.status(500).json({ error: 'Failed to update {resource}' });
   }
-}
+});
 
 /**
- * DELETE /api/admin/{resource}/[id] - Delete resource (admin only)
+ * DELETE /api/admin/{resource}/:id - Delete resource (admin only)
  */
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+router.delete('/:id', async (req: Request, res: Response) => {
   try {
-    const adminId = await verifyAdminAndGetUserId();
+    const { id } = req.params;
 
-    await withAdminContext(prisma, adminId, async (client) => {
-      await client.{table_name}.delete({
-        where: { id: params.id }
-      });
-    });
-
-    return NextResponse.json(
-      { success: true, message: '{Resource} deleted successfully' }
+    const pool: Pool = req.app.get('db');
+    const result = await pool.query(
+      `DELETE FROM {table_name} WHERE id = $1 RETURNING id`,
+      [id]
     );
 
-  } catch (error) {
-    console.error('Error deleting admin {resource}:', error);
-
-    if (error instanceof Error && error.message === 'Admin access required') {
-      return NextResponse.json(
-        { error: 'Admin access required' },
-        { status: 403 }
-      );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: '{Resource} not found' });
     }
 
-    return NextResponse.json(
-      { error: 'Failed to delete {resource}' },
-      { status: 500 }
-    );
+    return res.json({ success: true, message: '{Resource} deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting admin {resource}:', error);
+    return res.status(500).json({ error: 'Failed to delete {resource}' });
   }
-}
+});
+
+export default router;
 ```
 
 ## Customization Guide
 
 1. **Replace placeholders**:
-   - `{resource}` → Resource name (e.g., `content`, `users`)
-   - `{table_name}` → Prisma model name (e.g., `course_content`, `users`)
-   - `{Resource}` → Capitalized for messages
+   - `{resource}` -- Resource name (e.g., `organizations`, `users`)
+   - `{table_name}` -- PostgreSQL table name (e.g., `planning_sessions`, `linear_tokens`)
+   - `{Resource}` -- Capitalized for messages
 
 2. **Update Zod schemas**:
    - Define fields specific to your resource
    - Add business validation rules
    - Handle optional vs required fields
 
-3. **Adjust database queries**:
+3. **Adjust SQL queries**:
    - Add filtering logic
-   - Include relations as needed
+   - Add JOIN clauses for related data
    - Implement pagination/sorting
 
 4. **Add audit logging** (optional but recommended):
@@ -279,78 +255,61 @@ export async function DELETE(
 
 ## Security Checklist
 
-- [x] **Admin Verification**: Use `verifyAdminAndGetUserId()` first
-- [x] **RLS Context**: All operations use `withAdminContext()`
+- [x] **Admin Verification**: `requireAdmin` middleware checks role before handler
+- [x] **Authentication**: OAuth middleware validates token upstream
 - [x] **Input Validation**: Zod schemas for all inputs
+- [x] **Parameterized Queries**: No string concatenation in SQL
 - [x] **Error Handling**: Safe error messages (no sensitive data)
 - [x] **Audit Logging**: Track admin actions (recommended)
-- [x] **No Direct Prisma**: Never bypass RLS context
 
 ## Validation Commands
 
 ```bash
 # Type checking
-yarn type-check
+npm run build
 
 # Linting
-yarn lint
+npm run lint 2>/dev/null || npx eslint src/routes/
 
-# Integration tests (admin routes)
-yarn test:integration
+# Run tests
+npm test
 
 # Full validation
-yarn ci:validate
+npm test && npm run build && echo "BE SUCCESS" || echo "BE FAILED"
 ```
 
-## Example: Admin Content Management
+## Example: Admin Organization Management
 
 ```typescript
-// app/api/admin/content/route.ts
-import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
-import { verifyAdminAndGetUserId } from "@/lib/auth-admin";
-import { withAdminContext } from "@/lib/rls-context";
-import { prisma } from "@/lib/prisma";
+// src/routes/admin/organizations.ts
+import { Router, Request, Response } from 'express';
+import { z } from 'zod';
+import { Pool } from 'pg';
 
-const CreateContentSchema = z.object({
-  title: z.string().min(1).max(255),
-  tier: z.enum(["FREE", "PRO", "VIP"]),
-  status: z.enum(["draft", "published"]).default("draft"),
+const router = Router();
+
+const UpdateOrgSchema = z.object({
+  organization_id: z.string().min(1),
+  status: z.enum(['active', 'suspended']).optional(),
 });
 
-export async function POST(request: NextRequest) {
+router.get('/', async (req: Request, res: Response) => {
   try {
-    const adminId = await verifyAdminAndGetUserId();
-    const body = await request.json();
-    const validated = CreateContentSchema.parse(body);
-
-    const content = await withAdminContext(prisma, adminId, async (client) => {
-      return client.course_content.create({
-        data: {
-          ...validated,
-          course_id: "default-course",
-          created_by: adminId,
-        },
-      });
-    });
-
-    return NextResponse.json({ success: true, data: content }, { status: 201 });
-  } catch (error) {
-    console.error("Error creating content:", error);
-
-    if (error instanceof Error && error.message === "Admin access required") {
-      return NextResponse.json(
-        { error: "Admin access required" },
-        { status: 403 },
-      );
-    }
-
-    return NextResponse.json(
-      { error: "Failed to create content" },
-      { status: 500 },
+    const pool: Pool = req.app.get('db');
+    const result = await pool.query(
+      `SELECT organization_id, created_at, updated_at
+       FROM linear_tokens
+       ORDER BY created_at DESC`
     );
+
+    return res.json({ success: true, data: result.rows });
+  } catch (error) {
+    console.error('Error fetching organizations:', error);
+    return res.status(500).json({ error: 'Failed to fetch organizations' });
   }
-}
+});
+
+export default router;
 ```
 
 ## Related Patterns
@@ -361,6 +320,6 @@ export async function POST(request: NextRequest) {
 
 ---
 
-**Pattern Source**: `app/api/course/content/route.ts`
-**Last Updated**: 2025-10-03
+**Pattern Source**: `src/webhooks/handler.ts`, `src/index.ts`
+**Last Updated**: 2026-03
 **Validated By**: System Architect

@@ -56,7 +56,7 @@ The following skills are available and will auto-activate when relevant:
 1. **Read spec** → `cat specs/ASP-XXX-{feature}-spec.md`
 2. **Find pattern** → Check spec for pattern reference, read from `patterns_library/api/`
 3. **Copy & customize** → Follow pattern's customization guide
-4. **Validate** → Run `yarn test:integration && yarn lint && yarn type-check`
+4. **Validate** → Run `npm test && npx tsc --noEmit && npx tsc --noEmit`
 
 **That's it!** BSA already did pattern discovery. You just execute.
 
@@ -64,7 +64,7 @@ The following skills are available and will auto-activate when relevant:
 
 ```bash
 # Full validation before PR
-yarn test:integration && yarn type-check && yarn lint && echo "BE SUCCESS" || echo "BE FAILED"
+npm test && npx tsc --noEmit && npx tsc --noEmit && echo "BE SUCCESS" || echo "BE FAILED"
 ```
 
 ## Pattern Execution Workflow (ASP-300)
@@ -99,28 +99,28 @@ ls patterns_library/api/
 // Pattern files are copy-paste ready!
 // Example from user-context-api.md:
 
-import { auth } from '@clerk/nextjs/server';
-import { NextRequest, NextResponse } from 'next/server';
+// Auth middleware from src/auth/
+import { Request, Response } from 'express';
 import { withUserContext } from '@/lib/rls-context';
-import { prisma } from '@/lib/prisma';
+import { pool } from '../db';
 
 export async function GET(request: NextRequest) {
   const { userId } = await auth();
   if (!userId) {
-    return NextResponse.json(
+    return Response.json(
       { error: 'Authentication required' },
       { status: 401 }
     );
   }
 
-  const data = await withUserContext(prisma, userId, async (client) => {
+  const data = await withUserContext(pool, userId, async (client) => {
     return client.{table_name}.findMany({
       where: { user_id: userId },
       orderBy: { created_at: 'desc' }
     });
   });
 
-  return NextResponse.json({ data });
+  return Response.json({ data });
 }
 ```
 
@@ -137,12 +137,12 @@ export async function GET(request: NextRequest) {
 
 ```bash
 # Run before committing
-yarn test:integration  # Tests your API
-yarn type-check        # TypeScript validation
-yarn lint             # ESLint checks RLS usage
+npm test  # Tests your API
+npx tsc --noEmit        # TypeScript validation
+npx tsc --noEmit             # ESLint checks RLS usage
 
 # If validation fails, check:
-# - RLS context helper used? (no direct prisma calls)
+# - RLS context helper used? (no direct SQL without pool module)
 # - All imports present?
 # - Zod schema matches spec?
 ```
@@ -205,11 +205,11 @@ cat patterns_library/api/zod-validation-api.md
 
 **CRITICAL**: All database operations MUST use RLS helpers:
 
-- `withUserContext(prisma, userId, callback)` - User operations
-- `withAdminContext(prisma, userId, callback)` - Admin operations
-- `withSystemContext(prisma, 'source', callback)` - System/webhook operations
+- `withUserContext(pool, userId, callback)` - User operations
+- `withAdminContext(pool, userId, callback)` - Admin operations
+- `withSystemContext(pool, 'source', callback)` - System/webhook operations
 
-**ESLint will error if you use direct `prisma` calls.**
+**ESLint will error if you use direct SQL without `pool` module.**
 
 ## Tools Available
 
@@ -232,9 +232,9 @@ cat patterns_library/api/zod-validation-api.md
 Before reporting completion:
 
 1. **Validation Loop Complete**
-   - `yarn test:integration` → PASS
-   - `yarn type-check` → PASS
-   - `yarn lint` → PASS
+   - `npm test` → PASS
+   - `npx tsc --noEmit` → PASS
+   - `npx tsc --noEmit` → PASS
    - All hooks auto-fixes applied
 
 2. **AC/DoD Checklist**

@@ -110,8 +110,8 @@ All schema changes require ARCHitect approval.
 
 ```bash
 # Verify migration created and tested locally
-ls prisma/migrations/ | tail -1
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/linear_agent" npx prisma migrate dev --name migration_name
+ls src/db/migrations/ | tail -1
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/linear_agent" npx raw SQL migration in src/db/migrations/ --name migration_name
 echo "DE SUCCESS" || echo "DE FAILED"
 ```
 
@@ -136,15 +136,15 @@ cat patterns_library/database/{pattern-name}.md
 # Available database patterns
 ls patterns_library/database/
 # - rls-migration.md (adding tables with RLS)
-# - prisma-transaction.md (atomic multi-step operations)
+# - sql-transaction patterns (atomic multi-step operations)
 ```
 
 ### Step 3: Copy Pattern Code
 
 ### For RLS migrations (rls-migration.md)
 
-```prisma
-// Step 1: Update schema.prisma
+```sql
+-- Step 1: Create new migration file
 model user_preferences {
   id            Int      @id @default(autoincrement())
   user_id       String   @db.VarChar(255)
@@ -169,11 +169,11 @@ CREATE POLICY user_preferences_isolation ON "user_preferences"
     USING (user_id = current_setting('app.current_user_id', true));
 ```
 
-### For transactions (prisma-transaction.md)
+### For transactions (sql-transaction patterns)
 
 ```typescript
 export async function createWithRelations(userId: string, data: any) {
-  return await withUserContext(prisma, userId, async (client) => {
+  return await withUserContext(pool, userId, async (client) => {
     return await client.$transaction(async (tx) => {
       const resource = await tx.{main_table}.create({ data: {...} });
       const items = await tx.{related_table}.createMany({ data: [...] });
@@ -196,7 +196,7 @@ export async function createWithRelations(userId: string, data: any) {
 
 ```bash
 # Create migration
-npx prisma migrate dev --name add_user_preferences_with_rls
+npx raw SQL migration in src/db/migrations/ --name add_user_preferences_with_rls
 
 # Verify RLS enabled
 docker exec -it db psql -U postgres -d linear_agent \
@@ -232,8 +232,8 @@ cat patterns_library/database/rls-migration.md
 ### Multi-Step Operations
 
 ```bash
-# BSA will reference prisma-transaction.md
-cat patterns_library/database/prisma-transaction.md
+# BSA will reference sql-transaction patterns
+cat patterns_library/database/sql-transaction patterns
 
 # Pattern includes
 # - Transaction wrapper with RLS
@@ -276,8 +276,8 @@ Before reporting completion:
 1. **Validation Loop Complete**
    - Migration created and tested locally
    - RLS policies verified (`rowsecurity = t`)
-   - `yarn type-check` → PASS
-   - `yarn lint` → PASS
+   - `npx tsc --noEmit` → PASS
+   - `npx tsc --noEmit` → PASS
 
 2. **ARCHitect Approval Obtained**
    - [ ] Migration files attached to Linear ticket
