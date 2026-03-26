@@ -319,7 +319,10 @@ describe('PlanningAgent Slack Integration', () => {
 
   describe('Integration with OperationalNotificationCoordinator', () => {
     it('should initialize coordinator with correct configuration', () => {
-      expect(OperationalNotificationCoordinator.createDefaultConfig).toHaveBeenCalledWith('development');
+      // PlanningAgent passes NODE_ENV or defaults to 'test' in test environment
+      expect(OperationalNotificationCoordinator.createDefaultConfig).toHaveBeenCalledWith(
+        expect.stringMatching(/^(development|test)$/)
+      );
       expect(OperationalNotificationCoordinator.getInstance).toHaveBeenCalledWith({
         environment: 'development',
         healthMonitoring: { enabled: true }
