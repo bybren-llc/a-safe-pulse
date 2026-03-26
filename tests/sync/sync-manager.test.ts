@@ -77,14 +77,14 @@ describe('SyncManager', () => {
 
     // Create instance with mocked dependencies
     syncManager = new SyncManager(options);
-    
-    // Get mock instances
-    mockConfluenceClient = (ConfluenceClient as unknown) as jest.Mocked<ConfluenceClient>;
-    mockLinearClient = (LinearClientWrapper as unknown) as jest.Mocked<LinearClientWrapper>;
-    mockChangeDetector = (ChangeDetector as unknown) as jest.Mocked<ChangeDetector>;
-    mockConflictResolver = (ConflictResolver as unknown) as jest.Mocked<ConflictResolver>;
-    mockSyncStore = (SyncStore as unknown) as jest.Mocked<SyncStore>;
-    mockIssueCreator = (LinearIssueCreatorFromPlanning as unknown) as jest.Mocked<LinearIssueCreatorFromPlanning>;
+
+    // Get mock instances from the SyncManager's internal properties
+    mockConfluenceClient = (syncManager as any).confluenceClient as jest.Mocked<ConfluenceClient>;
+    mockLinearClient = (syncManager as any).linearClient as jest.Mocked<LinearClientWrapper>;
+    mockChangeDetector = (syncManager as any).changeDetector as jest.Mocked<ChangeDetector>;
+    mockConflictResolver = (syncManager as any).conflictResolver as jest.Mocked<ConflictResolver>;
+    mockSyncStore = (syncManager as any).syncStore as jest.Mocked<SyncStore>;
+    mockIssueCreator = (syncManager as any).issueCreator as jest.Mocked<LinearIssueCreatorFromPlanning>;
   });
 
   afterEach(() => {
@@ -140,7 +140,7 @@ describe('SyncManager', () => {
       // Arrange
       (mockChangeDetector.detectChanges as jest.Mock).mockImplementation(() => Promise.resolve({
         linearChanges: [{ id: 'linear-1', itemId: 'item-1' }],
-        confluenceChanges: [{ id: 'confluence-1', itemId: 'item-2' }]
+        confluenceChanges: [{ id: 'confluence-1', itemId: 'item-1' }, { id: 'confluence-2', itemId: 'item-2' }]
       }));
 
       (mockChangeDetector.detectConflicts as jest.Mock).mockReturnValue([
@@ -192,7 +192,7 @@ describe('SyncManager', () => {
       // Assert
       expect(result).toEqual({
         success: false,
-        error: 'Test error',
+        error: 'Error detecting changes: Test error',
         createdIssues: 0,
         updatedIssues: 0,
         confluenceChanges: 0,

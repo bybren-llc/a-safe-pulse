@@ -7,7 +7,7 @@
 import request from 'supertest';
 import express from 'express';
 import { LinearClientWrapper } from '../../src/linear/client';
-import { initializeGlobalRegistry, getGlobalRegistry } from '../../src/agent/behavior-registry';
+import { initializeGlobalRegistry, getGlobalRegistry, shutdownGlobalRegistry } from '../../src/agent/behavior-registry';
 import { processBehaviorWebhook } from '../../src/agent/webhook-integration';
 import * as logger from '../../src/utils/logger';
 
@@ -64,11 +64,8 @@ describe('Behavior System E2E Integration', () => {
   });
 
   afterEach(async () => {
-    // Cleanup registry
-    const registry = getGlobalRegistry();
-    if (registry) {
-      await registry.shutdown();
-    }
+    // Cleanup registry — must null the global so it can be re-initialized
+    await shutdownGlobalRegistry();
   });
 
   describe('Issue Creation Flow', () => {

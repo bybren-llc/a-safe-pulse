@@ -227,7 +227,7 @@ describe('DecompositionAPIAdapter', () => {
 
     it('should detect stories that are too large', async () => {
       // Arrange
-      const invalidStories = [...sampleDecomposedStories];
+      const invalidStories = sampleDecomposedStories.map(s => ({ ...s }));
       invalidStories[0].storyPoints = 8; // Too large
 
       // Act
@@ -244,7 +244,7 @@ describe('DecompositionAPIAdapter', () => {
 
     it('should detect multiple parent stories', async () => {
       // Arrange
-      const invalidStories = [...sampleDecomposedStories];
+      const invalidStories = sampleDecomposedStories.map(s => ({ ...s }));
       invalidStories[1].parentStoryId = 'different-parent';
 
       // Act
@@ -260,7 +260,7 @@ describe('DecompositionAPIAdapter', () => {
 
     it('should warn about points mismatch', async () => {
       // Arrange
-      const invalidStories = [...sampleDecomposedStories];
+      const invalidStories = sampleDecomposedStories.map(s => ({ ...s }));
       invalidStories[0].storyPoints = 5; // Total now 10 instead of 8
 
       // Act
@@ -276,7 +276,7 @@ describe('DecompositionAPIAdapter', () => {
 
     it('should warn about business value distribution imbalance', async () => {
       // Arrange
-      const invalidStories = [...sampleDecomposedStories];
+      const invalidStories = sampleDecomposedStories.map(s => ({ ...s }));
       invalidStories[0].businessValuePortion = 0.9; // Total now > 1.0
 
       // Act

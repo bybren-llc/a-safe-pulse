@@ -62,6 +62,10 @@ describe('OAuth End-to-End Integration', () => {
 
     // Reset mocks
     jest.clearAllMocks();
+
+    // Mock encryptToken/decryptToken to pass through values (used by Confluence OAuth)
+    jest.mocked(mockedTokenManager.encryptToken).mockImplementation((token: string) => token);
+    jest.mocked(mockedTokenManager.decryptToken).mockImplementation((token: string) => token);
   });
 
   afterEach(() => {
@@ -119,14 +123,12 @@ describe('OAuth End-to-End Integration', () => {
       expect(callbackResponse.text).toContain('Authorization Successful!');
       expect(callbackResponse.text).toContain('Test Organization');
 
-      // Verify token exchange was called
+      // Verify token exchange was called (Linear uses URL-encoded form data)
       expect(mockedAxios.post).toHaveBeenCalledWith(
         'https://api.linear.app/oauth/token',
+        expect.any(URLSearchParams),
         expect.objectContaining({
-          client_id: 'test-linear-client-id',
-          client_secret: 'test-linear-client-secret',
-          code: 'test-auth-code',
-          grant_type: 'authorization_code'
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         })
       );
 
@@ -224,7 +226,7 @@ describe('OAuth End-to-End Integration', () => {
         })
       );
 
-      // Verify token storage was called
+      // Verify token storage was called (encryptToken is mocked to passthrough)
       expect(mockedModels.storeConfluenceToken).toHaveBeenCalledWith(
         'test-org-id',
         'test-confluence-access-token',
