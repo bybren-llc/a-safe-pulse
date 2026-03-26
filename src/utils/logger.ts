@@ -1,55 +1,65 @@
 /**
- * Simple logger utility for consistent logging
+ * Structured logger using Pino
+ *
+ * Exports the same API as the original console.log wrapper:
+ *   info(message, metadata?), warn(message, metadata?),
+ *   error(message, metadata?), debug(message, metadata?)
+ *
+ * Configured via LOG_LEVEL env var (default: 'info').
  */
 
-enum LogLevel {
-  DEBUG = 'DEBUG',
-  INFO = 'INFO',
-  WARN = 'WARN',
-  ERROR = 'ERROR'
-}
+import pino from 'pino';
 
-/**
- * Logs a message with the specified level and optional metadata
- */
-const log = (level: LogLevel, message: string, metadata?: any) => {
-  const timestamp = new Date().toISOString();
-  const logEntry = {
-    timestamp,
-    level,
-    message,
-    ...(metadata ? { metadata } : {})
-  };
-  
-  // In production, you might want to use a proper logging library
-  // like winston or pino instead of console.log
-  console.log(JSON.stringify(logEntry));
-};
+const pinoLogger = pino({
+  level: process.env.LOG_LEVEL || 'info',
+  timestamp: pino.stdTimeFunctions.isoTime,
+  formatters: {
+    level(label) {
+      return { level: label };
+    },
+  },
+});
 
 /**
  * Logs a debug message
  */
 export const debug = (message: string, metadata?: any) => {
-  log(LogLevel.DEBUG, message, metadata);
+  if (metadata !== undefined) {
+    pinoLogger.debug({ metadata }, message);
+  } else {
+    pinoLogger.debug(message);
+  }
 };
 
 /**
  * Logs an info message
  */
 export const info = (message: string, metadata?: any) => {
-  log(LogLevel.INFO, message, metadata);
+  if (metadata !== undefined) {
+    pinoLogger.info({ metadata }, message);
+  } else {
+    pinoLogger.info(message);
+  }
 };
 
 /**
  * Logs a warning message
  */
 export const warn = (message: string, metadata?: any) => {
-  log(LogLevel.WARN, message, metadata);
+  if (metadata !== undefined) {
+    pinoLogger.warn({ metadata }, message);
+  } else {
+    pinoLogger.warn(message);
+  }
 };
 
 /**
  * Logs an error message
  */
 export const error = (message: string, metadata?: any) => {
-  log(LogLevel.ERROR, message, metadata);
+  if (metadata !== undefined) {
+    pinoLogger.error({ metadata }, message);
+  } else {
+    pinoLogger.error(message);
+  }
 };
