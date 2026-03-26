@@ -51,6 +51,18 @@ docs
 *.md
 LICENSE
 
+# AI agent harnesses
+.claude
+.gemini
+.codex
+.cursor
+.agents
+
+# Project metadata (not needed in image)
+specs
+patterns_library
+dark-factory
+
 # Data
 data
 *.db

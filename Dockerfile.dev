@@ -1,6 +1,9 @@
-FROM node:18-alpine
+FROM node:20-alpine
 
 WORKDIR /app
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && adduser -S appuser -u 1001
 
 # Install dependencies
 COPY package*.json ./
@@ -9,8 +12,8 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Create data directory for SQLite
-RUN mkdir -p /app/data
+# Create data directory for SQLite and set ownership
+RUN mkdir -p /app/data && chown -R appuser:nodejs /app/data
 
 # Expose the webhook endpoint port
 EXPOSE 3000
@@ -19,6 +22,9 @@ EXPOSE 3000
 ENV NODE_ENV=development
 ENV PORT=3000
 ENV SQLITE_DB_PATH=/app/data/sync.db
+
+# Switch to non-root user
+USER appuser
 
 # Start the application in development mode
 CMD ["npm", "run", "dev"]
