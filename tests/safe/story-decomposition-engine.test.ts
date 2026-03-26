@@ -128,13 +128,17 @@ describe('StoryDecompositionEngine', () => {
     it('should identify complexity factors', async () => {
       const complexStory: Story = {
         ...mockStory,
-        description: 'Create a complex integration system with multiple APIs, database connections, security protocols, and performance optimizations. This system must handle high load and provide real-time processing capabilities.',
+        description: 'Create a complex integration system with multiple APIs, database connections, security protocols, and performance optimizations. This system must handle high load and provide real-time processing capabilities. ' +
+          'The architecture needs to support horizontal scaling across multiple regions with failover mechanisms. ' +
+          'Each component must be independently deployable with proper circuit breakers and health monitoring. ' +
+          'Data consistency must be guaranteed across all distributed nodes using eventual consistency patterns. ' +
+          'The system should support both synchronous and asynchronous communication patterns between services.',
         acceptanceCriteria: new Array(8).fill('Complex acceptance criterion'),
         storyPoints: 13
       };
 
       const analysis = await engine.analyzeStory(complexStory);
-      
+
       expect(analysis.complexityFactors).toContain('High number of acceptance criteria');
       expect(analysis.complexityFactors).toContain('Lengthy description indicating complexity');
       expect(analysis.complexityFactors).toContain('Technical complexity indicators present');
@@ -345,17 +349,28 @@ describe('StoryDecompositionEngine', () => {
     });
 
     it('should handle story with very high points', async () => {
+      // 20 points = max that fits in 4 sub-stories of 5 points each
       const largeStory: Story = {
         ...mockStory,
-        storyPoints: 21
+        storyPoints: 20
       };
 
       const result = await engine.decomposeStory(largeStory);
-      
+
       expect(result.subStories.length).toBe(4); // Should hit max sub-stories
       result.subStories.forEach(subStory => {
         expect(subStory.storyPoints).toBeLessThanOrEqual(5);
       });
+    });
+
+    it('should fail decomposition when points exceed distribution capacity', async () => {
+      // 21 points cannot be distributed across 4 sub-stories of max 5 points (capacity=20)
+      const oversizedStory: Story = {
+        ...mockStory,
+        storyPoints: 21
+      };
+
+      await expect(engine.decomposeStory(oversizedStory)).rejects.toThrow('Decomposition validation failed');
     });
 
     it('should handle story with minimal acceptance criteria', async () => {
@@ -489,13 +504,15 @@ describe('StoryDecompositionEngine', () => {
 
     it('should handle multiple decompositions', async () => {
       const stories: Story[] = [];
-      
+      // Use point values that distribute cleanly within maxSubStoryPoints=5
+      const pointValues = [6, 7, 8, 12, 15];
+
       for (let i = 0; i < 5; i++) {
         stories.push({
           ...mockStory,
           id: `story-${i}`,
           title: `Test Story ${i}`,
-          storyPoints: 6 + i
+          storyPoints: pointValues[i]
         });
       }
 

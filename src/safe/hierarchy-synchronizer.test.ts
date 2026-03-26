@@ -58,7 +58,6 @@ describe('HierarchySynchronizer', () => {
     (synchronizer as any).issueCreator = mockIssueCreator;
     (synchronizer as any).issueUpdater = mockIssueUpdater;
     (synchronizer as any).conflictResolver = mockConflictResolver;
-    (synchronizer as any).linearClient = mockLinearClient;
   });
 
   describe('synchronizeHierarchy', () => {

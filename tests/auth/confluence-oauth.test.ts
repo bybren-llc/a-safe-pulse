@@ -29,6 +29,8 @@ describe('Confluence OAuth', () => {
     process.env.CONFLUENCE_CLIENT_ID = 'test-client-id';
     process.env.CONFLUENCE_CLIENT_SECRET = 'test-client-secret';
     process.env.APP_URL = 'https://example.com';
+    // Valid 64-hex-char encryption key for AES-256 (needed by encryptToken/decryptToken)
+    process.env.ENCRYPTION_KEY = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2';
   });
 
   afterEach(() => {
@@ -93,7 +95,9 @@ describe('Confluence OAuth', () => {
       };
 
       const res = {
-        redirect: jest.fn()
+        redirect: jest.fn(),
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
       };
 
       // Mock token response
@@ -142,11 +146,11 @@ describe('Confluence OAuth', () => {
         }
       );
 
-      // Verify token storage
+      // Verify token storage (tokens are encrypted before storage)
       expect(mockedModels.storeConfluenceToken).toHaveBeenCalledWith(
         'test-org-id',
-        'test-access-token',
-        'test-refresh-token',
+        expect.any(String), // encrypted access token
+        expect.any(String), // encrypted refresh token
         'https://api.atlassian.com/ex/confluence/test-site-id',
         expect.any(Date)
       );
@@ -232,11 +236,11 @@ describe('Confluence OAuth', () => {
         }
       );
 
-      // Verify token storage
+      // Verify token storage (tokens are encrypted before storage)
       expect(mockedModels.storeConfluenceToken).toHaveBeenCalledWith(
         organizationId,
-        'new-access-token',
-        'new-refresh-token',
+        expect.any(String), // encrypted access token
+        expect.any(String), // encrypted refresh token
         'https://api.atlassian.com/ex/confluence/test-site-id',
         expect.any(Date)
       );
