@@ -70,7 +70,7 @@ describe('Health Monitoring Integration', () => {
 
       // Verify comprehensive health status
       expect(healthStatus).toBeDefined();
-      expect(healthStatus.timestamp).toBeInstanceOf(Number);
+      expect(typeof healthStatus.timestamp).toBe('number');
       expect(typeof healthStatus.isHealthy).toBe('boolean');
       expect(['healthy', 'warning', 'critical', 'unknown']).toContain(healthStatus.overall);
 

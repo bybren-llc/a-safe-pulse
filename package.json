@@ -1,7 +1,7 @@
 {
-  "name": "wtfb-linear-agents",
+  "name": "a-safe-pulse",
   "version": "0.1.0",
-  "description": "WTFB Linear Agents for SAFe Essentials workflow integration",
+  "description": "A SAFe Pulse — Linear Planning Agent for SAFe workflow integration",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc --project tsconfig.prod.json",
@@ -20,7 +20,10 @@
     "sync:start": "ts-node src/cli/index.ts sync start",
     "sync:stop": "ts-node src/cli/index.ts sync stop",
     "sync:status": "ts-node src/cli/index.ts sync status",
-    "sync:trigger": "ts-node src/cli/index.ts sync trigger"
+    "sync:trigger": "ts-node src/cli/index.ts sync trigger",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "format": "prettier --write src/"
   },
   "repository": {
     "type": "git",
@@ -31,9 +34,9 @@
     "agent",
     "safe",
     "planning",
-    "wtfb"
+    "a-safe-pulse"
   ],
-  "author": "Words to Film By",
+  "author": "ByBren, LLC",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/ByBren-LLC/A-SAFe-Pulse/issues"
@@ -52,11 +55,15 @@
     "jsdom": "^26.1.0",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.16.0",
+    "pino": "^10.3.1",
+    "pino-pretty": "^13.1.3",
     "sqlite": "^5.1.1",
-    "sqlite3": "^5.1.7",
-    "uuid": "^11.1.0"
+    "sqlite3": "^6.0.1",
+    "uuid": "^11.1.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/cheerio": "^0.22.35",
     "@types/express": "^4.17.22",
     "@types/jest": "^29.5.14",
@@ -66,11 +73,17 @@
     "@types/pg": "^8.6.6",
     "@types/supertest": "^6.0.3",
     "@types/uuid": "^10.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.57.2",
+    "@typescript-eslint/parser": "^8.57.2",
+    "eslint": "^10.1.0",
+    "eslint-config-prettier": "^10.1.8",
     "jest": "^29.7.0",
     "nodemon": "^3.1.10",
+    "prettier": "^3.8.1",
     "supertest": "^7.1.1",
     "ts-jest": "^29.4.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.57.2"
   }
 }

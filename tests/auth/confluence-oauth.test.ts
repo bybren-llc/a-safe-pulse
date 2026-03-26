@@ -1,4 +1,5 @@
 import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
+import crypto from 'crypto';
 import axios from 'axios';
 import * as confluenceOAuth from '../../src/auth/confluence-oauth';
 import * as models from '../../src/db/models';
@@ -17,6 +18,8 @@ jest.mock('../../src/utils/logger');
 // Define session interface for testing
 interface TestSession {
   organizationId?: string;
+  oauthState?: string;
+  codeVerifier?: string;
   [key: string]: any;
 }
 
@@ -41,7 +44,7 @@ describe('Confluence OAuth', () => {
   });
 
   describe('initiateConfluenceOAuth', () => {
-    it('should redirect to the Atlassian authorization URL', () => {
+    it('should redirect to the Atlassian authorization URL with cryptographic state and PKCE', () => {
       const session: TestSession = {};
       const req = {
         query: { organizationId: 'test-org-id' },
@@ -57,9 +60,19 @@ describe('Confluence OAuth', () => {
       confluenceOAuth.initiateConfluenceOAuth(req, res);
 
       expect(session.organizationId).toBe('test-org-id');
+      // State should be cryptographic, not the org ID
+      expect(session.oauthState).toBeDefined();
+      expect(session.oauthState).toMatch(/^[0-9a-f]{64}$/);
+      expect(session.codeVerifier).toBeDefined();
       expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('https://auth.atlassian.com/authorize'));
       expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('client_id=test-client-id'));
-      expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('state=test-org-id'));
+      expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('code_challenge='));
+      expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('code_challenge_method=S256'));
+      // State in URL should be the cryptographic state, not the org ID
+      const redirectUrl = (res.redirect as jest.Mock).mock.calls[0][0] as string;
+      const url = new URL(redirectUrl);
+      expect(url.searchParams.get('state')).toBe(session.oauthState);
+      expect(url.searchParams.get('state')).not.toBe('test-org-id');
     }, 10000); // 10 second timeout
 
     it('should handle missing client ID', () => {
@@ -83,15 +96,19 @@ describe('Confluence OAuth', () => {
   });
 
   describe('handleConfluenceCallback', () => {
-    it('should exchange the authorization code for tokens', async () => {
+    it('should exchange the authorization code for tokens with PKCE verifier', async () => {
+      const oauthState = crypto.randomBytes(32).toString('hex');
+      const codeVerifier = crypto.randomBytes(32).toString('base64url');
       const req = {
         query: {
           code: 'test-auth-code',
-          state: 'test-org-id'
+          state: oauthState
         },
         session: {
-          organizationId: 'test-org-id'
-        }
+          organizationId: 'test-org-id',
+          oauthState,
+          codeVerifier
+        } as TestSession
       };
 
       const res = {
@@ -123,7 +140,7 @@ describe('Confluence OAuth', () => {
 
       await confluenceOAuth.handleConfluenceCallback(req, res);
 
-      // Verify token exchange request
+      // Verify token exchange request includes code_verifier
       expect(mockedAxios.post).toHaveBeenCalledWith(
         'https://auth.atlassian.com/oauth/token',
         {
@@ -131,7 +148,8 @@ describe('Confluence OAuth', () => {
           client_id: 'test-client-id',
           client_secret: 'test-client-secret',
           code: 'test-auth-code',
-          redirect_uri: 'https://example.com/auth/confluence/callback'
+          redirect_uri: 'https://example.com/auth/confluence/callback',
+          code_verifier: codeVerifier
         }
       );
 
@@ -157,13 +175,18 @@ describe('Confluence OAuth', () => {
 
       // Verify redirect
       expect(res.redirect).toHaveBeenCalledWith('/auth/confluence/success?organizationId=test-org-id');
+
+      // Verify session state was cleared (replay prevention)
+      expect(req.session.oauthState).toBeUndefined();
+      expect(req.session.codeVerifier).toBeUndefined();
     });
 
     it('should handle missing authorization code', async () => {
       const req = {
         query: {},
         session: {
-          organizationId: 'test-org-id'
+          organizationId: 'test-org-id',
+          oauthState: 'some-state'
         }
       };
 
@@ -178,10 +201,11 @@ describe('Confluence OAuth', () => {
       expect(res.json).toHaveBeenCalledWith({ error: 'No authorization code received' });
     });
 
-    it('should handle missing organization ID', async () => {
+    it('should reject callback with missing session state', async () => {
       const req = {
         query: {
-          code: 'test-auth-code'
+          code: 'test-auth-code',
+          state: 'some-state'
         },
         session: {}
       };
@@ -193,8 +217,34 @@ describe('Confluence OAuth', () => {
 
       await confluenceOAuth.handleConfluenceCallback(req, res);
 
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Invalid state parameter' });
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Invalid OAuth state - session expired or missing' });
+    });
+
+    it('should reject callback with mismatched state', async () => {
+      const oauthState = crypto.randomBytes(32).toString('hex');
+      const wrongState = crypto.randomBytes(32).toString('hex');
+      const req = {
+        query: {
+          code: 'test-auth-code',
+          state: wrongState
+        },
+        session: {
+          organizationId: 'test-org-id',
+          oauthState,
+          codeVerifier: 'some-verifier'
+        }
+      };
+
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      };
+
+      await confluenceOAuth.handleConfluenceCallback(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Invalid OAuth state' });
     });
   });
 

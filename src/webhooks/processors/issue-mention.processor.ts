@@ -154,7 +154,7 @@ export class IssueMentionProcessor extends BaseWebhookProcessor {
 
     // Professional closing
     response += `---\n`;
-    response += `_SAFe PULSE Agent • Powered by WTFB Linear Integration_`;
+    response += `_SAFe PULSE Agent • Powered by A SAFe Pulse_`;
 
     return response;
   }
