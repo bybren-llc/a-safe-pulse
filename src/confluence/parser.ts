@@ -96,7 +96,10 @@ export class ConfluenceParser {
   parse(): ConfluenceDocument {
     try {
       // Parse the document elements
-      this.document.elements = this.parseElements(this.$('body').children());
+      // In xmlMode, cheerio doesn't create a <body> wrapper, so use root children
+      const body = this.$('body');
+      const root = body.length > 0 ? body.children() : this.$.root().children();
+      this.document.elements = this.parseElements(root);
 
       // Extract sections based on headings
       this.document.sections = this.extractSections(this.document.elements);
@@ -360,7 +363,8 @@ export class ConfluenceParser {
     const macroParams: Record<string, string> = {};
 
     // Extract macro parameters
-    element.find('ac:parameter').each((_, param) => {
+    // Escape colons in CSS selectors for xml namespace prefixes
+    element.find('ac\\:parameter').each((_, param) => {
       const $param = this.$(param);
       const name = $param.attr('ac:name') || '';
       const value = $param.text().trim();
@@ -370,7 +374,7 @@ export class ConfluenceParser {
     });
 
     // Extract macro content
-    const macroContent = element.find('ac:rich-text-body').text().trim();
+    const macroContent = element.find('ac\\:rich-text-body').text().trim();
 
     return {
       type: ConfluenceElementType.MACRO,
