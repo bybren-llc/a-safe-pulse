@@ -1,7 +1,7 @@
 {
-  "name": "wtfb-linear-agents",
+  "name": "a-safe-pulse",
   "version": "0.1.0",
-  "description": "WTFB Linear Agents for SAFe Essentials workflow integration",
+  "description": "A SAFe Pulse — Linear Planning Agent for SAFe workflow integration",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc --project tsconfig.prod.json",
@@ -34,9 +34,9 @@
     "agent",
     "safe",
     "planning",
-    "wtfb"
+    "a-safe-pulse"
   ],
-  "author": "Words to Film By",
+  "author": "ByBren, LLC",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/ByBren-LLC/A-SAFe-Pulse/issues"

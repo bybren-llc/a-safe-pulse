@@ -65,7 +65,7 @@ const oauthLimiter = rateLimit({
 
 // Routes
 app.get('/', (req, res) => {
-  res.send('WTFB Linear Planning Agent is running');
+  res.send('A SAFe Pulse agent is running');
 });
 
 // Health check endpoint
