@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
+import crypto from 'crypto';
 import axios from 'axios';
 import * as logger from '../utils/logger';
 import * as tokenManager from './tokens';
+import './session-types';
 
 /**
  * Initiates the OAuth flow by redirecting to Linear's authorization page
@@ -17,6 +19,20 @@ export const initiateOAuth = (req: Request, res: Response) => {
     });
   }
 
+  if (!req.session) {
+    logger.error('Session not available for OAuth state management');
+    return res.status(500).json({ error: 'Session not available' });
+  }
+
+  // Generate cryptographic state parameter for CSRF protection
+  const state = crypto.randomBytes(32).toString('hex');
+  req.session.oauthState = state;
+
+  // Generate PKCE code verifier and challenge
+  const codeVerifier = crypto.randomBytes(32).toString('base64url');
+  const codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64url');
+  req.session.codeVerifier = codeVerifier;
+
   // Construct the authorization URL
   const authUrl = new URL('https://linear.app/oauth/authorize');
   authUrl.searchParams.append('client_id', clientId);
@@ -24,6 +40,9 @@ export const initiateOAuth = (req: Request, res: Response) => {
   authUrl.searchParams.append('response_type', 'code');
   authUrl.searchParams.append('scope', 'read write app:assignable app:mentionable');
   authUrl.searchParams.append('actor', 'app');
+  authUrl.searchParams.append('state', state);
+  authUrl.searchParams.append('code_challenge', codeChallenge);
+  authUrl.searchParams.append('code_challenge_method', 'S256');
 
   logger.info('Initiating OAuth flow', { redirectUri });
 
@@ -36,12 +55,48 @@ export const initiateOAuth = (req: Request, res: Response) => {
  */
 export const handleOAuthCallback = async (req: Request, res: Response) => {
   try {
-    const { code } = req.query;
+    const { code, state } = req.query;
 
     if (!code) {
       logger.error('Missing authorization code');
       return res.status(400).json({ error: 'Missing authorization code' });
     }
+
+    // Validate cryptographic state parameter (CSRF protection)
+    if (!req.session || !req.session.oauthState) {
+      logger.error('OAuth state not found in session');
+      return res.status(403).json({ error: 'Invalid OAuth state - session expired or missing' });
+    }
+
+    if (!state || typeof state !== 'string') {
+      logger.error('Missing state parameter in callback');
+      return res.status(403).json({ error: 'Missing state parameter' });
+    }
+
+    try {
+      const stateMatch = crypto.timingSafeEqual(
+        Buffer.from(state as string),
+        Buffer.from(req.session.oauthState)
+      );
+      if (!stateMatch) {
+        logger.error('OAuth state mismatch - possible CSRF attack');
+        return res.status(403).json({ error: 'Invalid OAuth state' });
+      }
+    } catch {
+      logger.error('OAuth state comparison failed');
+      return res.status(403).json({ error: 'Invalid OAuth state' });
+    }
+
+    // Retrieve PKCE code verifier from session
+    const codeVerifier = req.session.codeVerifier;
+    if (!codeVerifier) {
+      logger.error('PKCE code verifier not found in session');
+      return res.status(403).json({ error: 'PKCE verification failed - session expired or missing' });
+    }
+
+    // Clear session OAuth state to prevent replay attacks
+    delete req.session.oauthState;
+    delete req.session.codeVerifier;
 
     const clientId = process.env.LINEAR_CLIENT_ID;
     const clientSecret = process.env.LINEAR_CLIENT_SECRET;
@@ -69,7 +124,8 @@ export const handleOAuthCallback = async (req: Request, res: Response) => {
         client_secret: clientSecret,
         redirect_uri: redirectUri,
         code: code as string,
-        grant_type: 'authorization_code'
+        grant_type: 'authorization_code',
+        code_verifier: codeVerifier
       }),
       {
         headers: {
