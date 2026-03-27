@@ -2,11 +2,27 @@ import express, { Request, Response } from 'express';
 import session from 'express-session';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+
+// Load environment variables BEFORE any other imports that read process.env
+dotenv.config();
+
+// Validate environment variables at startup
+import { loadEnv } from './config/env';
+try {
+  loadEnv();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+} catch (err: any) {
+  console.error('Environment validation failed:', err.message || err);
+  console.error('Check .env file against .env.template');
+  process.exit(1);
+}
+
 import { initiateOAuth, handleOAuthCallback } from './auth/oauth';
 import { initiateConfluenceOAuth, handleConfluenceCallback } from './auth/confluence-oauth';
 import migrationRoutes from './auth/migration-routes';
 import { handleWebhook } from './webhooks/handler';
 import { initializeDatabase } from './db/models';
+import { testConnection } from './db/connection';
 import * as logger from './utils/logger';
 import planningRoutes from './api/planning';
 import healthRoutes from './api/health';
@@ -14,9 +30,6 @@ import apiRoutes from './routes';
 import { LinearClientWrapper } from './linear/client';
 import { initializeGlobalRegistry } from './agent/behavior-registry';
 import { processBehaviorWebhook } from './agent/webhook-integration';
-
-// Load environment variables
-dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -127,6 +140,9 @@ app.use('/api', apiRoutes);
 // Initialize the database and start the server
 (async () => {
   try {
+    // Test database connection (explicit, not at import time)
+    await testConnection();
+
     // Initialize the database
     await initializeDatabase();
     logger.info('Database initialized successfully');
