@@ -30,6 +30,8 @@ export interface BatchResult<T> {
   id: string;
   /** Whether the operation succeeded */
   success: boolean;
+  /** Whether the operation was skipped due to idempotency deduplication */
+  skipped?: boolean;
   /** The result value (if successful) */
   result?: T;
   /** The error (if failed) */
@@ -134,7 +136,8 @@ export class BatchOperationManager {
     for (const id of skippedIds) {
       const skippedResult: BatchResult<T> = {
         id,
-        success: true,
+        success: false,  // Skipped is not a success — it's a dedup
+        skipped: true,
         duration: 0,
       };
       results.push(skippedResult);
@@ -165,8 +168,8 @@ export class BatchOperationManager {
 
     const summary: BatchSummary<T> = {
       total,
-      succeeded: results.filter((r) => r.success).length,
-      failed: results.filter((r) => !r.success).length,
+      succeeded: results.filter((r) => r.success && !r.skipped).length,
+      failed: results.filter((r) => !r.success && !r.skipped).length,
       skipped: skippedIds.length,
       results,
       duration: Date.now() - batchStart,

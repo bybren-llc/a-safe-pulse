@@ -1,19 +1,25 @@
 import { Pool } from 'pg';
 import * as logger from '../utils/logger';
 
-// Create a connection pool
+// Create a connection pool (lazy — no side effects at import time)
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
-// Test the connection
-pool.query('SELECT NOW()', (err, res) => {
-  if (err) {
-    logger.error('Error connecting to database', { error: err });
-  } else {
+/**
+ * Tests the database connection. Call this explicitly at startup,
+ * not at module import time (avoids side effects during testing).
+ */
+export const testConnection = async (): Promise<boolean> => {
+  try {
+    const res = await pool.query('SELECT NOW()');
     logger.info('Database connection successful', { timestamp: res.rows[0].now });
+    return true;
+  } catch (err) {
+    logger.error('Error connecting to database', { error: err });
+    return false;
   }
-});
+};
 
 /**
  * Executes a database query
