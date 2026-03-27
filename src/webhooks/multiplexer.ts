@@ -323,24 +323,16 @@ export class WebhookMultiplexer {
     reg.metrics.lastInvokedAt = new Date();
 
     try {
-      let timeoutHandle: NodeJS.Timeout | null = null;
-      const timeoutPromise = new Promise<string>((resolve) => {
-        timeoutHandle = setTimeout(() => resolve('TIMEOUT'), timeoutMs);
+      await Promise.race([
+        reg.handler.handle(event),
+        this.createTimeout(timeoutMs),
+      ]).then((result) => {
+        if (result === 'TIMEOUT') {
+          throw new TimeoutError(
+            `Handler "${reg.handler.name}" timed out after ${timeoutMs}ms`
+          );
+        }
       });
-
-      const result = await Promise.race([
-        reg.handler.handle(event).then(() => 'OK'),
-        timeoutPromise,
-      ]);
-
-      // Always clear the timeout to prevent handle leaks
-      if (timeoutHandle) clearTimeout(timeoutHandle);
-
-      if (result === 'TIMEOUT') {
-        throw new TimeoutError(
-          `Handler "${reg.handler.name}" timed out after ${timeoutMs}ms`
-        );
-      }
 
       const latency = Date.now() - start;
       reg.metrics.successCount++;
@@ -377,7 +369,9 @@ export class WebhookMultiplexer {
     }
   }
 
-  // Timeout creation is now inlined in invokeHandler to allow clearTimeout on success
+  private createTimeout(ms: number): Promise<string> {
+    return new Promise((resolve) => setTimeout(() => resolve('TIMEOUT'), ms));
+  }
 }
 
 class TimeoutError extends Error {

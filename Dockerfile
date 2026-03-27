@@ -26,9 +26,6 @@ RUN npm ci --omit=dev && npm cache clean --force
 # Copy built output from builder stage
 COPY --from=builder /app/dist ./dist
 
-# Copy SQL migration files (read from disk at runtime by runMigrations)
-COPY --from=builder /app/src/db/migrations/*.sql ./dist/db/migrations/
-
 # Create data directory for SQLite and set ownership
 RUN mkdir -p /app/data && chown -R appuser:nodejs /app/data
 
