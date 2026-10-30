@@ -17,65 +17,192 @@ function fail(message) {
   process.exit(1);
 }
 
-function collectInstalled(name, node, found) {
+function isSqlitePackageName(name) {
+  return PACKAGES.includes(name);
+}
+
+function isSqliteResolved(resolved) {
+  const value = String(resolved || '');
+  // registry.npmjs.org/sqlite3/-/sqlite3-6.0.1.tgz  (check sqlite3 first)
+  if (value.includes('/sqlite3/-/')) {
+    return true;
+  }
+  // registry.npmjs.org/sqlite/-/sqlite-5.1.1.tgz — do not match sqlite3
+  return /\/sqlite\/-\/sqlite-/.test(value);
+}
+
+function isSqliteAliasSpec(spec) {
+  if (typeof spec !== 'string') {
+    return false;
+  }
+  return /^(npm:)?sqlite3(@|$)/.test(spec) || /^(npm:)?sqlite(@|$)/.test(spec);
+}
+
+function isSqliteIdentity(key, meta) {
+  const name = (meta && meta.name) || key;
+  const resolved = meta && meta.resolved;
+  return isSqlitePackageName(key) || isSqlitePackageName(name) || isSqliteResolved(resolved);
+}
+
+/**
+ * Walk a full `npm ls --json` tree and collect sqlite identities, including
+ * packages installed under an npm alias (folder name != package name).
+ */
+function findSqliteInTree(node, found) {
   if (!node || typeof node !== 'object') {
     return found;
   }
-  if (node.dependencies && node.dependencies[name]) {
-    const meta = node.dependencies[name];
-    found.push(`${name}@${meta.version || '?'}`);
-    collectInstalled(name, meta, found);
-  }
-  if (node.dependencies) {
-    for (const [depName, dep] of Object.entries(node.dependencies)) {
-      if (depName !== name) {
-        collectInstalled(name, dep, found);
-      }
+  const deps = node.dependencies || {};
+  for (const [key, meta] of Object.entries(deps)) {
+    if (!meta || typeof meta !== 'object') {
+      continue;
     }
+    if (isSqliteIdentity(key, meta)) {
+      const name = meta.name || key;
+      found.push(`${key} (${name}@${meta.version || '?'})`);
+    }
+    findSqliteInTree(meta, found);
   }
   return found;
 }
 
-const pkgJson = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
-for (const section of ['dependencies', 'devDependencies', 'optionalDependencies']) {
-  const deps = pkgJson[section] || {};
-  for (const name of PACKAGES) {
-    if (Object.prototype.hasOwnProperty.call(deps, name)) {
-      fail(`${section} still declares ${name}`);
+function runNpmLsJson() {
+  const args = ['ls', '--all', '--json'];
+  const npmExecPath = process.env.npm_execpath;
+  let result;
+  if (npmExecPath) {
+    result = spawnSync(process.execPath, [npmExecPath, ...args], {
+      cwd: ROOT,
+      encoding: 'utf8',
+    });
+  } else {
+    const cmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+    result = spawnSync(cmd, args, {
+      cwd: ROOT,
+      encoding: 'utf8',
+      shell: process.platform === 'win32',
+    });
+  }
+
+  if (result.error) {
+    fail(`failed to run npm ls: ${result.error.message}`);
+  }
+  if (!result.stdout || !String(result.stdout).trim()) {
+    fail('npm ls produced no output');
+  }
+
+  try {
+    return JSON.parse(result.stdout);
+  } catch (err) {
+    fail(`could not parse npm ls JSON: ${err.message}`);
+  }
+  return {};
+}
+
+function walkNodeModules(dir, onPkg) {
+  if (!fs.existsSync(dir)) {
+    return;
+  }
+  let entries;
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch (err) {
+    fail(`could not read ${path.relative(ROOT, dir)}: ${err.message}`);
+  }
+  for (const entry of entries) {
+    if (!entry.isDirectory() && !entry.isSymbolicLink()) {
+      continue;
+    }
+    if (entry.name === '.bin' || entry.name.startsWith('.')) {
+      continue;
+    }
+    const full = path.join(dir, entry.name);
+    if (entry.name.startsWith('@')) {
+      walkNodeModules(full, onPkg);
+      continue;
+    }
+    const pkgFile = path.join(full, 'package.json');
+    if (fs.existsSync(pkgFile)) {
+      let pkg;
+      try {
+        pkg = JSON.parse(fs.readFileSync(pkgFile, 'utf8'));
+      } catch (err) {
+        fail(`could not parse ${path.relative(ROOT, pkgFile)}: ${err.message}`);
+      }
+      onPkg(full, pkg);
+      walkNodeModules(path.join(full, 'node_modules'), onPkg);
     }
   }
 }
 
-for (const name of PACKAGES) {
-  const dir = path.join(ROOT, 'node_modules', name);
-  if (fs.existsSync(dir)) {
-    fail(`node_modules/${name} exists`);
+function checkManifest() {
+  const pkgJson = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+  for (const section of ['dependencies', 'devDependencies', 'optionalDependencies']) {
+    const deps = pkgJson[section] || {};
+    for (const [name, spec] of Object.entries(deps)) {
+      if (isSqlitePackageName(name) || isSqliteAliasSpec(spec)) {
+        fail(`${section} still declares ${name}: ${spec}`);
+      }
+    }
   }
 }
 
-const addon = path.join(ROOT, 'node_modules', 'sqlite3', 'build', 'Release', 'node_sqlite3.node');
-if (fs.existsSync(addon)) {
-  fail(`SQLite native binary is present at ${path.relative(ROOT, addon)}`);
+function checkLockfile() {
+  const lockPath = path.join(ROOT, 'package-lock.json');
+  if (!fs.existsSync(lockPath)) {
+    return;
+  }
+  const lock = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+  for (const [pkgPath, meta] of Object.entries(lock.packages || {})) {
+    if (!pkgPath || !meta || typeof meta !== 'object') {
+      continue;
+    }
+    const folderName = pkgPath.split('node_modules/').pop();
+    if (isSqliteIdentity(folderName, meta)) {
+      fail(`package-lock.json still contains ${pkgPath}`);
+    }
+  }
 }
 
-const result = spawnSync('npm', ['ls', ...PACKAGES, '--all', '--json'], {
-  cwd: ROOT,
-  encoding: 'utf8',
-});
-
-let tree = {};
-try {
-  tree = JSON.parse(result.stdout || '{}');
-} catch (err) {
-  fail(`could not parse npm ls JSON: ${err.message}`);
+function checkInstalledTree() {
+  walkNodeModules(path.join(ROOT, 'node_modules'), (dir, pkg) => {
+    if (isSqlitePackageName(pkg.name)) {
+      fail(`found ${pkg.name}@${pkg.version || '?'} at ${path.relative(ROOT, dir)}`);
+    }
+    const addon = path.join(dir, 'build', 'Release', 'node_sqlite3.node');
+    if (fs.existsSync(addon)) {
+      fail(`SQLite native binary is present at ${path.relative(ROOT, addon)}`);
+    }
+  });
 }
 
-for (const name of PACKAGES) {
-  const found = collectInstalled(name, tree, []);
+function checkNpmLs() {
+  const tree = runNpmLsJson();
+  const found = findSqliteInTree(tree, []);
   if (found.length > 0) {
-    fail(`npm ls ${name} is not empty: ${found.join(', ')}`);
+    fail(`npm ls tree still contains sqlite: ${found.join(', ')}`);
   }
 }
 
-process.stdout.write('npm ls sqlite3 sqlite: empty (not installed)\n');
-process.stdout.write('No SQLite native binary is shipped.\n');
+function main() {
+  checkManifest();
+  checkLockfile();
+  checkInstalledTree();
+  checkNpmLs();
+
+  process.stdout.write('npm ls sqlite3 sqlite: empty (not installed)\n');
+  process.stdout.write('No SQLite native binary is shipped.\n');
+}
+
+module.exports = {
+  PACKAGES,
+  findSqliteInTree,
+  isSqliteAliasSpec,
+  isSqliteIdentity,
+  isSqlitePackageName,
+  isSqliteResolved,
+};
+
+if (require.main === module) {
+  main();
+}

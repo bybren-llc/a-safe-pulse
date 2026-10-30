@@ -5,6 +5,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
+const {
+  findSqliteInTree,
+  isSqliteAliasSpec,
+  isSqliteIdentity,
+} = require('../../scripts/check-no-sqlite');
+
 const ROOT = path.join(__dirname, '../..');
 
 describe('sqlite packages are not shipped', () => {
@@ -27,5 +33,32 @@ describe('sqlite packages are not shipped', () => {
 
   it('does not install node_modules/sqlite', () => {
     expect(fs.existsSync(path.join(ROOT, 'node_modules', 'sqlite'))).toBe(false);
+  });
+
+  it('detects sqlite3 installed under an npm alias in the ls tree', () => {
+    expect(isSqliteAliasSpec('npm:sqlite3@6.0.1')).toBe(true);
+    expect(isSqliteAliasSpec('npm:sqlite@5.1.1')).toBe(true);
+    expect(isSqliteAliasSpec('^6.0.1')).toBe(false);
+    expect(
+      isSqliteIdentity('driver', {
+        name: 'sqlite3',
+        version: '6.0.1',
+        resolved: 'https://registry.npmjs.org/sqlite3/-/sqlite3-6.0.1.tgz',
+      })
+    ).toBe(true);
+
+    const found = findSqliteInTree(
+      {
+        dependencies: {
+          driver: {
+            name: 'sqlite3',
+            version: '6.0.1',
+            resolved: 'https://registry.npmjs.org/sqlite3/-/sqlite3-6.0.1.tgz',
+          },
+        },
+      },
+      []
+    );
+    expect(found.join(' ')).toMatch(/driver \(sqlite3@6\.0\.1\)/);
   });
 });
