@@ -9,6 +9,7 @@ const {
   findSqliteInTree,
   isSqliteAliasSpec,
   isSqliteIdentity,
+  validateNpmLsResult,
 } = require('../../scripts/check-no-sqlite');
 
 const ROOT = path.join(__dirname, '../..');
@@ -60,5 +61,40 @@ describe('sqlite packages are not shipped', () => {
       []
     );
     expect(found.join(' ')).toMatch(/driver \(sqlite3@6\.0\.1\)/);
+  });
+
+  it('fails closed on npm ls top-level error JSON with exit 1', () => {
+    expect(() =>
+      validateNpmLsResult({
+        status: 1,
+        stdout: '{"error":{"code":"EFAKE"}}',
+      })
+    ).toThrow(/npm ls reported an error: EFAKE/);
+  });
+
+  it('fails closed on empty npm ls JSON with exit 1', () => {
+    expect(() =>
+      validateNpmLsResult({
+        status: 1,
+        stdout: '{}',
+      })
+    ).toThrow(/without an inspectable dependency tree/);
+  });
+
+  it('accepts a full tree when npm ls exits nonzero for ELSPROBLEMS', () => {
+    const tree = {
+      name: 'a-safe-pulse',
+      version: '0.1.0',
+      dependencies: {
+        express: { version: '4.21.2' },
+      },
+      error: { code: 'ELSPROBLEMS', summary: 'extraneous: leftover@1.0.0' },
+    };
+    expect(
+      validateNpmLsResult({
+        status: 1,
+        stdout: JSON.stringify(tree),
+      })
+    ).toEqual(tree);
   });
 });

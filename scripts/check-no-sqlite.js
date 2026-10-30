@@ -66,6 +66,56 @@ function findSqliteInTree(node, found) {
   return found;
 }
 
+function hasInspectableTree(tree) {
+  return (
+    !!tree &&
+    typeof tree === 'object' &&
+    !Array.isArray(tree) &&
+    typeof tree.dependencies === 'object' &&
+    tree.dependencies !== null &&
+    typeof tree.name === 'string' &&
+    tree.name.length > 0 &&
+    typeof tree.version === 'string' &&
+    tree.version.length > 0
+  );
+}
+
+/**
+ * Validate a spawnSync-like npm ls result. Throws on fail-closed cases so
+ * tests can inject stdout/status without spawning.
+ */
+function validateNpmLsResult(result) {
+  if (result.error) {
+    throw new Error(`failed to run npm ls: ${result.error.message}`);
+  }
+  if (!result.stdout || !String(result.stdout).trim()) {
+    throw new Error('npm ls produced no output');
+  }
+
+  let tree;
+  try {
+    tree = JSON.parse(result.stdout);
+  } catch (err) {
+    throw new Error(`could not parse npm ls JSON: ${err.message}`);
+  }
+
+  const inspectable = hasInspectableTree(tree);
+  if (tree && typeof tree === 'object' && tree.error && !inspectable) {
+    const code =
+      tree.error && typeof tree.error === 'object' && tree.error.code
+        ? tree.error.code
+        : 'unknown';
+    throw new Error(`npm ls reported an error: ${code}`);
+  }
+  if (result.status !== 0 && result.status !== null && !inspectable) {
+    throw new Error(
+      `npm ls exited ${result.status} without an inspectable dependency tree`
+    );
+  }
+
+  return tree;
+}
+
 function runNpmLsJson() {
   const args = ['ls', '--all', '--json'];
   const npmExecPath = process.env.npm_execpath;
@@ -84,17 +134,10 @@ function runNpmLsJson() {
     });
   }
 
-  if (result.error) {
-    fail(`failed to run npm ls: ${result.error.message}`);
-  }
-  if (!result.stdout || !String(result.stdout).trim()) {
-    fail('npm ls produced no output');
-  }
-
   try {
-    return JSON.parse(result.stdout);
+    return validateNpmLsResult(result);
   } catch (err) {
-    fail(`could not parse npm ls JSON: ${err.message}`);
+    fail(err.message);
   }
   return {};
 }
@@ -197,10 +240,12 @@ function main() {
 module.exports = {
   PACKAGES,
   findSqliteInTree,
+  hasInspectableTree,
   isSqliteAliasSpec,
   isSqliteIdentity,
   isSqlitePackageName,
   isSqliteResolved,
+  validateNpmLsResult,
 };
 
 if (require.main === module) {
