@@ -31,7 +31,7 @@ describe('envSchema', () => {
 
     expect(result.success).toBe(false);
     if (!result.success) {
-      const paths = result.error.issues.map((i: { path: (string | number)[] }) => i.path[0]);
+      const paths = result.error.issues.map((i) => i.path[0]);
       expect(paths).toContain('LINEAR_CLIENT_ID');
       expect(paths).toContain('LINEAR_CLIENT_SECRET');
       expect(paths).toContain('LINEAR_REDIRECT_URI');
